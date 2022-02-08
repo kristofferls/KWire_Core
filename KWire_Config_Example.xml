@@ -1,0 +1,47 @@
+﻿<?xml version="1.0"?>
+<KWire>
+	<Settings>
+		<Ember_IP>127.0.0.1</Ember_IP>
+		<Ember_Port>9000</Ember_Port>
+		<Ember_ProviderName>EGPIO_AUTOCAM</Ember_ProviderName>
+		<AutoCam_IP>127.0.0.1</AutoCam_IP>
+		<AutoCam_Port>5500</AutoCam_Port>
+		<Debug>false</Debug>
+	</Settings>
+	<AudioDevices>
+		<Device>
+			<DEVICE_ID>14</DEVICE_ID>
+			<NAME>R3LAY WDM Driver</NAME>
+			<SOURCE>EGO</SOURCE>
+			<ORDER>1</ORDER>
+		</Device>
+		<Device>
+			<DEVICE_ID></DEVICE_ID>
+			<NAME>R3LAY WDM Driver 2</NAME>
+			<SOURCE>PROD</SOURCE>
+			<ORDER>2</ORDER>
+		</Device>
+		<Device>
+			<DEVICE_ID></DEVICE_ID>
+			<NAME>R3LAY WDM Driver 3</NAME>
+			<SOURCE>MIC3</SOURCE>
+			<ORDER>3</ORDER>
+		</Device>
+		<Device>
+			<DEVICE_ID></DEVICE_ID>
+			<NAME>R3LAY WDM Driver 4</NAME>
+			<SOURCE>MIC4</SOURCE>
+			<ORDER>4</ORDER>
+		</Device>
+	</AudioDevices>
+	<EmberGPIs>
+		<EGPI>
+			<ID>1</ID>
+			<NAME>REDLIGHT</NAME>
+		</EGPI>
+		<EGPI>
+			<ID>2</ID>
+			<NAME>MASTERONOFF</NAME>
+		</EGPI>
+	</EmberGPIs>
+</KWire>
