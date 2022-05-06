@@ -91,41 +91,6 @@ namespace KWire
 
 
 
-            if (Config.HeartBeatEnabled == true && Config.Debug == false)
-            {
-                using (HeartBeat hb = new HeartBeat())
-                {
-
-                    while (hb.PowerCoreStatus == false || hb.AudioServiceStatus == false)
-                    {
-                        Task task = hb.GetPulse();
-
-                        task.Wait();
-
-                        if (hb.AudioServiceStatus == false)
-                        {
-                            Logfile.Write("MAIN :: WARN :: Audioservice is not running.");
-
-                        }
-
-                        if (hb.PowerCoreStatus == false)
-                        {
-                            Logfile.Write("MAIN :: FATAL :: PowerCore not responding! Waiting...");
-
-                        }
-                    }
-
-
-                }
-
-            }
-            else if (Config.HeartBeatEnabled == false)
-            {
-                Logfile.Write("MAIN :: INFO :: HeartBeat disabled in KWire_config.xml");
-            }
-
-
-
             // Configure Ember-connection. Check to see if the config file contains nothing / blank. To avoid total crash of Ember library. 
 
             if (Config.Ember_IP == null || Config.Ember_Port == 0)
@@ -143,6 +108,19 @@ namespace KWire
                 Logfile.Write("MAIN :: WARN :: Ember is diabled in config - will skip configuration of EGPIOs");
             }
             
+            if (Config.AudioServiceName.Length == 0) 
+            {
+                Logfile.Write("MAIN :: WARN :: AudioService name is not set in KWire_Config.xml");
+            }
+            else
+            {
+                AudioService audioService = new AudioService();
+
+                if (audioService.Status() != true) 
+                {
+                    Logfile.Write("MAIN :: WARN :: AudioService " + Config.AudioServiceName + " is not running!");  
+                }
+            }
             
             ConfigureAudioDevices();
             DisplayAudioDevices();
@@ -189,6 +167,8 @@ namespace KWire
             }
             */
             // Serialize both lists of Audio and EGPIs to JSON: 
+
+            
             await Task.Run(() =>
             {
                 var json = (JsonConvert.SerializeObject(AudioDevices));
@@ -222,13 +202,61 @@ namespace KWire
                         
         }
 
+        public static async Task BroadcastToAutoCam_NoEmber()
+        {
+            /*
+            if (Config.Debug) 
+            {
+                var now = DateTime.Now; 
+                Console.WriteLine("Broadcast to AutoCam started @: " + now.ToString());
+            }
+            */
+            // Serialize list of Audiodevices status to JSON: 
+
+            
+            await Task.Run(() =>
+            {
+                var json = (JsonConvert.SerializeObject(AudioDevices));
+            
+
+                //Convert JSON-strings to string for modification
+                string serializedAudioDevices = json.ToString();
+            
+                //In order to merge the two strings, some chars added by the Serializer needs to be removed, and others added, so that the two strings can be combined. 
+                serializedAudioDevices = serializedAudioDevices.Replace("]", ",");
+            
+
+                //Create a new JSONstring of the two different types. 
+                string JSONString = serializedAudioDevices;
+
+                //Clean up
+                JSONString = JSONString += "]";
+                JSONString = JSONString.Replace("}]]", "}]");
+
+                //Send to WebSocketClient / NodeJS over dgram / UDP. 
+                wsclient.SendJSON(JSONString);
+
+            });
+            /*
+            if (Config.Debug) 
+            {
+                var now = DateTime.Now;
+                Console.WriteLine("Broadcast to AutoCam completed @ " + now.ToString());
+            }
+            */
+
+        }
+
+        /// <summary>
+        /// 
+        /// </summary>
         public static void ConfigureAudioDevices()
         {
             // Gets info on all available recording devices, and creates an array of AudioDevice-objects. 
 
             List<string[]> systemDevices = new List<string[]>(); // temporary storage of all devices. 
 
-
+          
             Logfile.Write("MAIN :: There are " + WaveIn.DeviceCount + " recording devices available in this system");
             Logfile.Write("");
             Logfile.Write("----------------- < AUDIODEVICES IN THIS SYSTEM >-----------------------");
@@ -239,20 +267,18 @@ namespace KWire
 
                 Logfile.Write("ID: " + i + " NAME: " + dev.ProductName + " CHANNELS:" + dev.Channels);
 
-                // Cleam up device name for easier matching. This is not used visually, only internally. 
+                // Clean up device name for easier matching. This is not used visually, only internally. 
 
                 // Check if the device is a LAWO R3Lay device. Due to the way the device name is written, it is easilly confused. 
-                if (dev.ProductName.Contains("LAWO")) 
-                {                    
+                if (dev.ProductName.Contains("LAWO") || dev.ProductName.Contains("Lawo") || dev.ProductName.Contains("R3LAY") ) 
+                {                     
                     if (Config.Debug == true) 
                     {
-                        Console.WriteLine("Device" + dev.ProductName + " is a LAWO Device - will clean up the dev-name to avoid ");
-                    } 
-                    string devNameClean = Regex.Replace(dev.ProductName, "Lawo R3LAY WD", "\r\n"); //Removes the "Lawo R3LAY WD shit from the first device that has no number in its name. 
-                    devNameClean = Regex.Replace(devNameClean, "Lawo R3LAY", "\r\n"); //Removes the "Lawo R3LAY shit from the rest of the dev-names that has a number in its name. 
-                    devNameClean = devNameClean.Replace("(", ""); // Removes the ( from the string
-                    devNameClean = Regex.Replace(devNameClean, @"\s+", ""); //Removes all whitespaces in the name. 
+                        Console.WriteLine("Device" + dev.ProductName + " is a LAWO Device - will clean up the dev-name to avoid confusion");
+                    }
 
+                    string devNameClean = CleanUpLawoDevice(dev.ProductName);
+                    
                     string[] adev = { Convert.ToString(i), devNameClean.TrimEnd(), Convert.ToString(dev.Channels) };
                     systemDevices.Add(adev); // Add complete device to list.
                 } 
@@ -278,6 +304,11 @@ namespace KWire
 
                 for (int i = 0; i < Config.Devices.Count; i++)
                 {
+                    if (Config.Debug) 
+                    {
+                        Console.WriteLine("ConfigureAudioDevices() :: Treating device : " + Config.Devices[i][1]);
+                        Console.WriteLine("ConfiguredAudioDevices() :: AudioDevices array now has " + AudioDevices.Count + " members");
+                    }
                     
                     if (Config.Devices[i][3].Length > 0) // IF there is a DeviceID tag set, use that to create the AudioDevice. 
                     {
@@ -292,16 +323,33 @@ namespace KWire
 
                     else 
                     {
-                        string match = Convert.ToString(Config.Devices[i][1]); // the device name from position 1 in array. 
+                        
+                        string devNameFromConfig = Convert.ToString(Config.Devices[i][1]); // the device name from position 1 in array. 
                         string sourceName = Config.Devices[i][2];
                         //Clean up the match criteria. 
 
+                        string match = CleanUpLawoDevice(devNameFromConfig);
+
+                        
                         match = Regex.Replace(match, "Lawo R3LAY", "\r\n");
                         match = match.Replace("(", "".Replace(")", ""));
                         match = Regex.Replace(match, @"\s+", "");
+                        
 
                         for (int x = 0; x < systemDevices.Count; x++)
                         {
+                            // !!!!!!!!!!!!!!!!! THIS FAILS in .net CORE for some reason.!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+                            /*
+                             * The reason why it crashes / does not work
+                             * It should compare the names entered in config, stored in Config.Devices , with washed names (potentially), stored in systemDevices. 
+                             * Currently it gets all the data yet again, and tries to match it. Can of worms...
+                             */
+
+                            //if (Regex.IsMatch(systemDevices[x][1], @"(^|\s)" + match + @"(\s|$)"))
+
+                            //string devName = systemDevices[x][1];
+                            //devName = Regex.Replace(devName, "\r\n");
 
                             if (Regex.IsMatch(systemDevices[x][1], @"(^|\s)" + match + @"(\s|$)"))
                             {
@@ -309,7 +357,15 @@ namespace KWire
                                 AudioDevices.Add(new Device(x, sourceName, dev.ProductName, dev.Channels));
                             }
 
+
                         }
+
+                        if (Config.Debug)
+                        {
+                            Console.WriteLine("###################################################################");
+                            Console.WriteLine("");
+                        }
+
 
                     }
 
@@ -321,10 +377,38 @@ namespace KWire
             else 
             {
                 Logfile.Write("MAIN :: WARN :: No devices assigned from CONFIGFILE.");
+                if (Config.Debug) 
+                {
+                    Console.WriteLine("Number of objects in array: " + Config.Devices.Count);
+                    foreach(var device in Config.Devices) 
+                    {
+                        Console.WriteLine(device.Single());
+                    }
+                }
             }
 
             
         }
+
+        private static string CleanUpLawoDevice(string devName) 
+        {
+            // will add a LAWO device - with all that entails..
+            string devNameClean = Regex.Replace(devName, "Lawo R3LAY WD", "\r\n"); //Removes the "Lawo R3LAY WD shit from the first device that has no number in its name. 
+            devNameClean = Regex.Replace(devNameClean, "R3LAY", "\r\n"); //Removes the "Lawo R3LAY shit from the rest of the dev-names that has a number in its name. 
+            devNameClean = Regex.Replace(devNameClean, "Lawo R3LAY", "\r\n"); //Removes the "Lawo R3LAY shit from the rest of the dev-names that has a number in its name. 
+            devNameClean = Regex.Replace(devNameClean, "Lawo", "\r\n"); //Removes the "Lawo R3LAY shit from the rest of the dev-names that has a number in its name. 
+            devNameClean = devNameClean.Replace("(", ""); // Removes the ( from the string
+            devNameClean = Regex.Replace(devNameClean, @"\s+", ""); //Removes all whitespaces in the name. 
+
+            return devNameClean;
+
+        }
+
+        private static void AddGenericDevice() 
+        {
+            throw new NotImplementedException();
+        }
+
 
         public static void DisplayAudioDevices() 
         {

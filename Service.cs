@@ -10,7 +10,7 @@ namespace KWire
     public class Kwire_Service
     {
         private readonly System.Timers.Timer _timer;
-        private readonly System.Timers.Timer _heartBeatTimer;
+        
         
         //private DateTime _lastHeartBeat;
         //public DateTime LastRedlight;
@@ -27,24 +27,15 @@ namespace KWire
                 //_timer.Elapsed += TimerElapsed;
                 _timer.Elapsed += UpdateAutoCam;
                 Logfile.Write("KWire Service :: AutoCam Broadcast interval in ms is : " + Convert.ToString(Config.AutoCam_Broadcast_Interval));
-
-                if (Config.Debug == false && Config.HeartBeatEnabled == true) 
-                {
-                    _heartBeatTimer = new System.Timers.Timer(Config.HeartBeatInterval) { AutoReset = true };
-                    _heartBeatTimer.Elapsed += HeartBeatTimer;
-                    Logfile.Write("KWire Service :: HeartBeat interval in ms is : " + Convert.ToString(Config.HeartBeatInterval));
-                }
-                else if (Config.Debug == true)
-                {
-                    Console.WriteLine("KWire Service :: HeartBeat disabled due to debug mode true");                    
-                }
-               
+                
+                             
 
                 Logfile.Write("KWire Service :: Constructor done");
             } 
             else
             {
                 Logfile.Write("KWire Service :: Configuration errors found. Please fix! Program terminated");
+                DumpRawDataToLog();
                 Environment.Exit(1);
             }
 
@@ -53,56 +44,53 @@ namespace KWire
 
         }
        
-        private async void HeartBeatTimer(object sender, ElapsedEventArgs e) 
+        private void DumpRawDataToLog() 
         {
-
-            
-            using (HeartBeat hb = new HeartBeat()) 
+            if (Config.Debug == false) 
             {
-                try 
+                Logfile.Write("KWire Service :: Application crashed! To see all memory data, set debug mode on, and restart the application");
+            }
+            else
+            {
+                Console.WriteLine("Dumping data");
+
+                Console.WriteLine("Configured number of Audio Devices in Configfile class is " + Config.Devices.Count);
+                foreach (var device in Config.Devices) 
                 {
-
-                    DateTime? lastEGPI = hb.LastEGPI(); //Get latest EGPI time.
-                    
-                    if (lastEGPI != null) 
-                    {
-                        Logfile.Write("KWire Service :: HeartBeat :: Check Started. Last EGPI was received @ " + lastEGPI.ToString());
-                    }
-                    else
-                    {
-                        Logfile.Write("KWire Service :: HeartBeat :: Check Started. No EGPI signal is recorded");
-                    }
-                    
-                    await hb.GetPulse(); //Get latest status from both VPB-service and PowerCore.
-
-                    if (hb.PowerCoreStatus == false)
-                    {
-
-                        Logfile.Write("KWire Service :: HeartBeat :: PowerCore not available handling.");
-                        //Get serious. Reboot the service.
-                        Environment.Exit(1);
-                    }
-
-                    if(hb.PowerCoreStatus == true && (hb.AudioServiceStatus == true))
-                    {
-                        Logfile.Write("KWire Service :: HeartBeat :: All is well!");
-                    }
+                    Console.WriteLine(device.FirstOrDefault()?.ToString());
                 }
 
-                catch(Exception error) 
+                Console.WriteLine("Configured number of audio devices in Core class is : " + Core.AudioDevices.Count);
+
+                foreach(var deviceInCore in Core.AudioDevices) 
                 {
-                    Logfile.Write("KWire Service :: HEARTBEAT :: " + error.ToString());
+                    Console.WriteLine(deviceInCore.ToString());
+                }
+
+                Console.WriteLine("Configured number of Ember GPIOS is " + Core.EGPIs.Count);
+
+                foreach(var egpio in Core.EGPIs) 
+                {
+                    Console.WriteLine("EGPIO Name is: " + egpio.Name);   
                 }
 
             }
-        }
-
         
+        }
+               
         private async void UpdateAutoCam(object sender, ElapsedEventArgs e) 
         {
                        
-            Task broadcast = Core.BroadcastToAutoCam();
-            await broadcast.ConfigureAwait(false);
+            if (Config.EmberEnabled || EmberConsumer.IsConnected) 
+            {
+                Task broadcast = Core.BroadcastToAutoCam();
+                await broadcast.ConfigureAwait(false);
+            }
+            else
+            {
+                Task broadcast = Core.BroadcastToAutoCam_NoEmber();
+                await broadcast.ConfigureAwait(false);
+            }
             /*
             try
             {
@@ -124,7 +112,7 @@ namespace KWire
                 
             } 
             */
-            
+
         }
 
 
@@ -133,10 +121,7 @@ namespace KWire
             if (Core.AudioDevices.Count != 0 && Core.EGPIs.Count != 0) 
             {
                 _timer.Start();
-                if (Config.Debug != true && Config.HeartBeatEnabled == true) 
-                {
-                    _heartBeatTimer?.Start();
-                }           
+                          
             }
             else 
             {
@@ -149,10 +134,7 @@ namespace KWire
         public void Stop() 
         {
             _timer.Stop();
-            if (Config.Debug != true) 
-            {
-                _heartBeatTimer?.Stop();   
-            }   
+              
         }
 
     }

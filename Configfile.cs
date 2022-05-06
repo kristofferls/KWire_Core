@@ -15,7 +15,7 @@ namespace KWire
         public static int Ember_Port = 0;
         public static IPAddress AutoCam_IP = null;
         public static int AutoCam_Port = 0;
-        public static int[] DeviceIDs; // depr. 
+        //public static int[] DeviceIDs; // depr. 
         public static bool Debug = false;
         public static string[,] EGPIs;
         public static List<string[]> Devices; 
@@ -63,7 +63,7 @@ namespace KWire
                             XmlNode ember_Enabled = settingsNode.SelectSingleNode("Ember_Enabled");
                             
                             XmlNode serviceMonitor_Enabled = settingsNode.SelectSingleNode("Service_Monitor_Enabled");
-                            XmlNode heartBeat_Enabled = settingsNode.SelectSingleNode("HeartBeat_Enabled");
+                            //XmlNode heartBeat_Enabled = settingsNode.SelectSingleNode("HeartBeat_Enabled");
                             
                             XmlNode ember_IP = settingsNode.SelectSingleNode("Ember_IP");
                             XmlNode ember_Port = settingsNode.SelectSingleNode("Ember_Port");
@@ -71,9 +71,9 @@ namespace KWire
                             XmlNode autoCam_Port = settingsNode.SelectSingleNode("AutoCam_Port");
 
                             XmlNode providerName = settingsNode.SelectSingleNode("Ember_ProviderName");
-                            XmlNode vpbSericeName = settingsNode.SelectSingleNode("SoundcardService_Name");
+                            //XmlNode vpbSericeName = settingsNode.SelectSingleNode("SoundcardService_Name");
                             XmlNode autoCam_BroadcastInterval = settingsNode.SelectSingleNode("AutoCam_BroadcastInterval");
-                            XmlNode heartBeat_Interval = settingsNode.SelectSingleNode("HeartBeatInterval");
+                            //XmlNode heartBeat_Interval = settingsNode.SelectSingleNode("HeartBeatInterval");
                             XmlNode audioServiceName = settingsNode.SelectSingleNode("AUDIOSERVICE_NAME");
 
 
@@ -138,45 +138,16 @@ namespace KWire
                                 AutoCam_Broadcast_Interval = Convert.ToInt32(autoCam_BroadcastInterval.InnerXml);
                             }
                             
-                            // Heartbeat related settings
-
-                            if(heartBeat_Enabled.InnerXml.Any() == true && (Convert.ToBoolean(heartBeat_Enabled.InnerXml)) == true) 
+                            if (audioServiceName.InnerXml.Any() == false) 
                             {
-                                HeartBeatEnabled = true;
-
-                                if (heartBeat_Interval.InnerXml.Length == 0)
-                                {
-                                    Logfile.Write("CONFIGFILE :: FATAL :: Tag <HeartBeatInterval> not set!");
-                                }
-                                else
-                                {
-                                    HeartBeatInterval = Convert.ToInt32(heartBeat_Interval.InnerXml);
-                                }
+                                Logfile.Write("CONFIGFILE :: WARN :: Tag <AUDIOSERVICE_NAME> is empty - will have no power to check it's status");
                             }
-                           
-
-                            // Audioservice check - related to HeartBeat. 
-
-                            if (HeartBeatEnabled == true && (Convert.ToBoolean(serviceMonitor_Enabled.InnerXml)) == true) 
-                            {
-                                if (audioServiceName.InnerXml.Length == 0)
-                                {
-                                    Logfile.Write("CONFIGFILE :: FATAL :: Tag <AUDIOSERVICE_NAME> not set!");
-                                }
-                                else
-                                {
-                                    AudioServiceName = audioServiceName.InnerXml;
-                                }
-                            } 
-                            else if (HeartBeatEnabled == false && (Convert.ToBoolean(serviceMonitor_Enabled.InnerXml)) == true) 
-                            {
-                                Logfile.Write("CONFIGFILE :: WARN :: ServiceMonitor is enabled, but HeartBeat is disabled. Service monitor will not work.");
-                            }
-                            else 
+                            else
                             {
                                 AudioServiceName = audioServiceName.InnerXml;
                             }
-                            
+
+                           
                         }
                     }
                     

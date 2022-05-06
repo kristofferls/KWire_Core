@@ -7,40 +7,71 @@ using System.Threading.Tasks;
 using Lawo.EmberPlusSharp.S101;
 using Lawo.Threading.Tasks;
 using Lawo.EmberPlusSharp.Model;
+using System.Net.NetworkInformation;
+using System.Diagnostics;
 
 namespace KWire
 {
     public static class EmberConsumer
     {
 
-
-                
-    public static void Connect() 
+        public static bool IsConnected;
+        private static DateTime timeOfError;
+        private static bool currentStatus;
+        public static void Connect() 
     {
         if (Config.Ember_IP != null || Config.Ember_Port != 0) 
         {
                 //Check if the provider is in fact online. 
-                bool currentStatus = false; 
+                
+                    
+                    Ping pingTest = new Ping();
+                    PingOptions pingOptions = new PingOptions();
+                    pingOptions.DontFragment = true;
 
-                if (Config.Ember_IP == "127.0.0.1") 
-                {
-                    Console.WriteLine("Emberhost is running locally - will assume DEV MODE - skipping HTTP check");
-                    currentStatus = true;
-                }
-                else 
-                {
-                    HeartBeat startupCheck = new HeartBeat();
+                    string data = "aaaaaaaaaaaaaaaaaaa";
+                    byte[] buffer = Encoding.ASCII.GetBytes(data);
+                    int timeOut = 1024;
 
-                    currentStatus = startupCheck.PollPowerCore().Result;
-
-                    if (Config.Debug)
+                    try
                     {
-                        Console.WriteLine("EMBERCONSUMER :: Connect :: PowerCoreStatus is " + startupCheck.PowerCoreStatus.ToString());
+                        PingReply reply = pingTest.Send(Config.Ember_IP, timeOut, buffer, pingOptions);
+                    
+
+                    
+
+                    if( reply.Status == IPStatus.Success) 
+                    {
+                        if (Config.Debug) 
+                        {
+                            Logfile.Write("EmberConsumer :: Pingtest successfull. Roundtrip time was: " + reply.RoundtripTime);
+                        }
+                        else
+                        {
+                            Logfile.Write("EmberConsumer :: Host Provider is available on the network");
+                        }
+                        
+                        currentStatus = true;
+                        
+                    } 
+                    
+                    else 
+                    
+                    {
+                        Logfile.Write("EmberConsumer :: FATAL ERROR :: Provider does not respond to ping - can't continue without it");
+                        Environment.Exit(0);
                     }
 
-                }
 
-                
+                    }
+                    catch (Exception)
+                    {
+                        throw;
+                    }
+
+
+
+
                 if (currentStatus) 
                 {
                     // This is necessary so that we can execute async code in a console application.
@@ -61,8 +92,13 @@ namespace KWire
                 }
                 else 
                 {
-                    Logfile.Write("EMBERCONSUMER :: ERROR :: Provider does not respond to HTTP requests!Terminating");
-                    Environment.Exit(1);
+                    Logfile.Write("EmberConsumer :: ERROR :: Provider does not respond to HTTP requests!Terminating");
+                    
+                    if(Config.Debug == false) //Do not actually terminate if in debug mode - just warn. Useful when using TinyEmber for testing. 
+                    {
+                        Environment.Exit(1);
+                    }
+                    
                 }
 
                 
@@ -71,41 +107,41 @@ namespace KWire
 
         else 
         {
-                Logfile.Write("EMBERCONSUMER :: ERROR :: No valid IP or Port was found in config. Please check config.xml");    
+                Logfile.Write("EmberConsumer :: ERROR :: No valid IP or Port was found in config. Please check config.xml");    
         }
 
 
     }
 
 
-    public static async Task<S101Client> ConnectAsync(string host, int port)
-    {
-        try 
+        public static async Task<S101Client> ConnectAsync(string host, int port)
         {
-            // Create TCP connection
-            var tcpClient = new TcpClient();
-            await tcpClient.ConnectAsync(host, port);
-
-            // Establish S101 protocol
-            // S101 provides message packaging, CRC integrity checks and a keep-alive mechanism.
-            var stream = tcpClient.GetStream();
-            return new S101Client(tcpClient, stream.ReadAsync, stream.WriteAsync);
-        }
-        catch (Exception err) 
-        {
-            if(Config.Debug) 
+            try
             {
+                // Create TCP connection
+                var tcpClient = new TcpClient();
+                await tcpClient.ConnectAsync(host, port);
+
+                // Establish S101 protocol
+                // S101 provides message packaging, CRC integrity checks and a keep-alive mechanism.
+                var stream = tcpClient.GetStream();
+                return new S101Client(tcpClient, stream.ReadAsync, stream.WriteAsync);
+            }
+            catch (Exception err)
+            {
+                if (Config.Debug)
+                {
                     Logfile.Write("EmberConsumer :: ERROR : " + err);
 
+                }
+
+
+                return null;
             }
-                
-            
-            return null;
-        }
-            
+
         }
 
-    private static void WriteChildren(INode node, int depth)
+        private static void WriteChildren(INode node, int depth)
     {
         var indent = new string(' ', 2 * depth);
 
@@ -153,12 +189,180 @@ namespace KWire
 
                         
                     });
-            Logfile.Write("---------------------------EmberPlus tree end ---------------------------");
+
+        Logfile.Write("---------------------------EmberPlus tree end ---------------------------");
+        
+            
+        Task.Run(() => MonitorConnection());
+            
+    }
+
+     
+
+    public static void MonitorConnection() 
+
+            //This method will run in the background, constantly monitoring the connection with the provider. If the connection is lost, it will call cleanup. 
+    
+    {
+       AsyncPump.Run(
+        async () =>
+        {
+            using (var client = await ConnectAsync(Convert.ToString(Config.Ember_IP), Config.Ember_Port))
+            using (var consumer = await Consumer<PowerCoreRoot>.CreateAsync(client))
+            {
+                var connectionLost = new TaskCompletionSource<Exception>();
+                //consumer.ConnectionLost += (s, e) => Consumer_ConnectionLost(s, e);
+                consumer.ConnectionLost += (s, e) => connectionLost.SetResult(e.Exception);
+
+                Console.WriteLine("Waiting for the provider to disconnect...");
+                var exception = await connectionLost.Task;
+                
+                Console.BackgroundColor = ConsoleColor.Red;
+                Console.ForegroundColor = ConsoleColor.White; 
+                
+                Logfile.Write("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
+                Logfile.Write("EmberConsumer :: !! WARNING !! Connection to provider " + Convert.ToString(Config.Ember_IP) + " was LOST!!");
+                Logfile.Write("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
+                Logfile.Write("Exception : " + exception);
+
+                timeOfError = DateTime.Now;
+
+                IsConnected = false;
+
+                
+                
+            }
+        });
+
+            ConnectionLostHandler();
+        }
+
+    private static void ConnectionLostHandler() 
+        {
+            //This method is supposed to do : 
+            //
+            // 1. Remove all EGPI objects. They are essentially not valid any more. 
+            
+            if (Config.Debug) 
+            {
+                Console.WriteLine("ConnectionLostHandler");
+                Console.WriteLine("EGPIs now " + Core.EGPIs.Count);
+                Console.WriteLine("Clearing");
+                
+                Core.EGPIs.Clear();
+
+                Console.WriteLine("EGPIs now: " + Core.EGPIs.Count);
+
+            }
+            else
+            {
+                Core.EGPIs.Clear();
+            }
+
+
+            // 2. Try to reconnect to the given provider. Continue until it works. Pause for N seconds betwen retries. Do NOT write to log every attempt, but keep track of number of attempts etc. 
+
+            int counter = 0;
+
+            //Console.WriteLine("Conunter is " + counter);
+
+            System.Threading.Thread.Sleep(5000);
+
+            while ( IsConnected == false) 
+            {
+                try
+                {
+                    Console.WriteLine("Counter is " + counter);
+                    var tcpClient = new TcpClient();
+                    tcpClient.Connect(Convert.ToString(Config.Ember_IP), Config.Ember_Port);
+
+                    
+                    var stream = tcpClient.GetStream();
+
+                    if (stream == null || tcpClient == null)
+                    {
+                        //Reconnection failed!
+                        if (Config.Debug)
+                        {
+                            Console.WriteLine("Reconnection attempt nr." + counter);
+                        }
+
+                        counter++;
+                        System.Threading.Thread.Sleep(5000);
+                    }
+                    else
+                    {
+                        if (Config.Debug)
+                        {
+                            Console.WriteLine("Reconnected <3");
+                        }
+
+                        
+                        IsConnected = true;
+                    }
+
+                    tcpClient.Close();
+                    tcpClient.Dispose();
+                }
+                catch (Exception e)
+                {
+
+                    Console.WriteLine(e);
+                    continue;
+                }
+
+
+            }
+
+
+            // 3. When re-established: call Reconnect method. 
+            Console.BackgroundColor = ConsoleColor.Black;
+            Console.ForegroundColor = ConsoleColor.White;
+
+            var now = DateTime.Now;
+
+            TimeSpan periodOffline = now.Subtract(timeOfError);
+                        
+            Logfile.Write("EmberConsumer :: ALERT :: Connection re established! It was offline for " + periodOffline.ToString(@"hh\:mm\:ss"));
+            Logfile.Write("EmberConsumer :: INFO :: Will wait 30s before attempting reconnection..");
+
+            var stopWatch = Stopwatch.StartNew();
+            var timeSpan = new TimeSpan(0, 0, 0, 30); //should be 30s 
+
+            while (stopWatch.Elapsed < timeSpan) 
+              {
+                if (Config.Debug) 
+                {
+                    Console.WriteLine("Waited: " + stopWatch.ElapsedMilliseconds / 1000f + " seconds");
+                }
+                
+              }
+            
+            Logfile.Write("EmberConsumer :: INFO :: Done!");
+            
+            Reconnect();
+
+        }
+
+    private static void Reconnect() 
+        {
+            //This method is supposed to do: 
+            //
+            //  1. Restart MonitorConnection method as a new task. 
+
+            Task.Run(() => MonitorConnection());
+
+            //  2. Re-create all Ember objects from list. 
+
+            Config.ConfigureEGPI();
+
+            Logfile.Write("EmberConsumer :: ALERT :: Reconnection complete!");
+            //
+            //
+
         }
 
     }
-
-
     public sealed class PowerCoreRoot : DynamicRoot<PowerCoreRoot>
     {
     }

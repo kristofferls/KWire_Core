@@ -13,12 +13,15 @@ namespace KWire
         private bool _stateChanged;
         private Stopwatch _lastChange;
         public DateTime? LastChange;
-        public bool _disconnected; 
+        private DateTime _timeOfError;
+        public bool _disconnected;
+        
 
         public EGPI(int id, string name)
         {
             _id = id;
             _name = name;
+            _disconnected = false;
             Logfile.Write("EGPI :: EGPI with ID: " + _id + " and name: " + _name + " created");
             GetState();
             //string currState = currentState.ToString();
@@ -27,9 +30,8 @@ namespace KWire
 
             Logfile.Write("EGPI :: Current state of " + this._id + ":" + this._name + " is:: " + this._state);
             Logfile.Write("EGPI :: Enabling async monitoring of " + this._id + ":" + this._name);
-#pragma warning disable CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
-            MonitorState();
-            //Monitor();
+            //Task.Run(() => TaskMonitor());
+            Task.Run(()=> MonitorState());
 
 
         }
@@ -68,46 +70,94 @@ namespace KWire
             }
         }
 
-
-        public async Task MonitorState()
+        private async void TaskMonitor() //NOT IMPLEMENTED 
         {
+            var taskFactories = new List<Func<Task>>();
+            taskFactories.Add(() => WaitForChange());
 
-            try
+            var runningTasks = taskFactories.ToDictionary(factory => factory());
+
+            while (runningTasks.Count > 0) 
             {
+                var completedTasks = await Task.WhenAny(runningTasks.Keys);
+                if (completedTasks.IsFaulted) 
+                {
+                    Logfile.Write("EGPI " + Convert.ToString(this._name) + " :: Provider connection lost!");
+                    var factory = runningTasks[completedTasks];
+                    var newTask = factory();
+                    runningTasks.Add(newTask, factory);
+                }
+                if (completedTasks.IsCanceled) 
+                {
+                    Console.WriteLine("Task completed - creating a new one");
+                    var factory = runningTasks[completedTasks];
+                    var newTask = factory();
+                    runningTasks.Add(newTask, factory);
+                }
+                else
+                {
+                    runningTasks.Remove(completedTasks);
+                    taskFactories.Add(()=> WaitForChange());
+                }
                 
-                await Task.Run(() =>{ WaitForChange();} ); //end of Task.Run
-
-
-                MonitorState();
-#pragma warning restore CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
             }
-
-            catch (Exception err)
-            {
-                Logfile.Write("EGPI :: MonitorState ERROR :: " + err);
-            }
-
 
         }
-
-
-
-        private void WaitForChange ()
+        public async Task MonitorState()
         {
-            var valueChanged = new TaskCompletionSource<string>();
-            try 
+            Task monitor = WaitForChange();
+            await monitor.ConfigureAwait(false);
+            Reload();
+                        
+        }
+
+        private void Reload() 
+        {
+            if (this._disconnected == true) 
+            {
+                
+            }
+            Task.Run(() => MonitorState());
+            if (Config.Debug == true) 
+            {
+                Console.WriteLine("EGPI :: " + this._name + " monitor task completed - restarting");
+            }
+        }
+
+        private async Task WaitForChange ()
+        {
+           
+
+            await Task.Run(() => 
+            {
+                //var valueChanged = new TaskCompletionSource<string>();
+                try 
             {
                AsyncPump.Run(
                async () =>
                {
+
                    using (var client = await EmberConsumer.ConnectAsync(Config.Ember_IP, Config.Ember_Port))
                    using (var consumer = await Consumer<PowerCoreRoot>.CreateAsync(client))
                    {
                        INode root = consumer.Root;
 
-                        // Navigate to the parameter we're interested in.
+                       if (this._disconnected == true && EmberConsumer.IsConnected == true) //DOES NOT WORK AS EXPECTED!!  
 
-                        var mixer = (INode)root.Children.First(c => c.Identifier == "Ruby"); //Defined by Lawo / OnAirDesigner
+                       {
+
+                           DateTime now = new DateTime();
+                           now = DateTime.Now;
+
+                           TimeSpan periodOffline = now.Subtract(_timeOfError);
+
+                           Logfile.Write("EGPI :: WARNING :: " + this._name + " is online again! It was offline for " + periodOffline.ToString(@"hh\:mm\:ss"));
+                           this._disconnected = false;
+                       }
+
+                       // Navigate to the parameter we're interested in.
+
+                       var mixer = (INode)root.Children.First(c => c.Identifier == "Ruby"); //Defined by Lawo / OnAirDesigner
                         var gpios = (INode)mixer.Children.First(c => c.Identifier == "GPIOs"); //Defined by Lawo / OnAirDesigner
                         var egpio_autocam = (INode)gpios.Children.First(c => c.Identifier == Config.Ember_ProviderName); //Set in OnAirDesigner, and is red from setting.xml.
                         var output_signals = (INode)egpio_autocam.Children.First(c => c.Identifier == "Output Signals"); //This name is hard coded from Lawo.
@@ -115,10 +165,11 @@ namespace KWire
                         var state = gpo.Children.First(c => c.Identifier == "State");//Hardcoded from Lawo. 
 
 
-                       //var valueChanged = new TaskCompletionSource<string>();
-                       
-                       consumer.ConnectionLost += Consumer_ConnectionLost;
+                       var valueChanged = new TaskCompletionSource<string>();
 
+                       
+                       
+                       //Raise an event if the value changes. 
                        state.PropertyChanged += (s, e) => valueChanged.SetResult(((IElement)s).GetPath()); //Tell API that we are interested in this value if it changes. 
 
                         Logfile.Write("EGPI :: ID: " + this._id + " NAME: " + this._name + " with path " + await valueChanged.Task + " has changed.");
@@ -140,17 +191,35 @@ namespace KWire
 
                        }
 
+                       
+                       
+                       /*
+                       //Should cancel the task if the connection is lost. 
+                       var connectionLost = new TaskCompletionSource<Exception>();
+
+                       consumer.ConnectionLost += (s, e) => connectionLost.SetResult(e.Exception);
+                       Console.WriteLine("EGPI " + this._name + " Connection lost!", await connectionLost.Task);
+                       */
                    }
                });
                 
             }
             catch(Exception error) 
             {
-                Logfile.Write("EGPI :: ID: " + this._id + " NAME: " + this._name + " ERROR :: " + error.ToString());
-               
+                if (this._disconnected == false) 
+                {
+                    Logfile.Write("EGPI :: ID: " + this._id + " NAME: " + this._name + " ERROR :: " + error.ToString());
+                    Logfile.Write("EGPI :: ID: " + this._id + " NAME: " + this._name + " Supressing futher errors until resolved!");
+                    
+                    this._timeOfError = DateTime.Now;                        
+                }
+                    this._disconnected = true;             
                 //throw;                
             }
-             
+            
+            });
+            
+
         }
 
         private void Consumer_ConnectionLost(object sender, Lawo.IO.ConnectionLostEventArgs e)

@@ -2,30 +2,75 @@
 <KWire>
 	<Settings>
 		<Ember_Enabled>true</Ember_Enabled>
-		<Ember_IP>127.0.0.1</Ember_IP>
-		<Ember_Port>9000</Ember_Port>
+		<Ember_IP>160.67.28.181</Ember_IP>
+		<Ember_Port>9020</Ember_Port>
 		<Ember_ProviderName>EGPIO_AUTOCAM</Ember_ProviderName>
 		<AutoCam_IP>127.0.0.1</AutoCam_IP>
 		<AutoCam_Port>5500</AutoCam_Port>
 		<AutoCam_BroadcastInterval>30</AutoCam_BroadcastInterval>
 		<Service_Monitor_Enabled>false</Service_Monitor_Enabled>
 		<AUDIOSERVICE_NAME>LAWO R3LAY Service Manager</AUDIOSERVICE_NAME>
-		<HeartBeat_Enabled>false</HeartBeat_Enabled>
-		<HeartBeatInterval>900000</HeartBeatInterval>
 		<Debug>true</Debug>
 	</Settings>
 	<AudioDevices>
 		<Device>
-			<DEVICE_ID>1</DEVICE_ID>
-			<NAME></NAME>
+			<DEVICE_ID></DEVICE_ID>
+			<NAME>WDM Driver 3</NAME>
 			<SOURCE>EGO</SOURCE>
 			<ORDER>0</ORDER>
 		</Device>
+		<Device>
+			<DEVICE_ID></DEVICE_ID>
+			<NAME>WDM Driver</NAME>
+			<SOURCE>MIC1</SOURCE>
+			<ORDER>1</ORDER>
+		</Device>
+		<Device>
+			<DEVICE_ID></DEVICE_ID>
+			<NAME>WDM Driver 2</NAME>
+			<SOURCE>MIC2</SOURCE>
+			<ORDER>2</ORDER>
+		</Device>
+		<Device>
+			<DEVICE_ID></DEVICE_ID>
+			<NAME>WDM Driver 5</NAME>
+			<SOURCE>MIK3</SOURCE>
+			<ORDER>4</ORDER>
+		</Device>
+		<Device>
+			<DEVICE_ID></DEVICE_ID>
+			<NAME>WDM Driver 6</NAME>
+			<SOURCE>MIK4</SOURCE>
+			<ORDER>3</ORDER>
+		</Device>
+		<Device>
+			<DEVICE_ID></DEVICE_ID>
+			<NAME>WDM Driver 4</NAME>
+			<SOURCE>PGM</SOURCE>
+			<ORDER>5</ORDER>
+		</Device>
+		
 	</AudioDevices>
 	<EmberGPIs>
 		<EGPI>
 			<ID>1</ID>
 			<NAME>REDLIGHT</NAME>
+		</EGPI>
+		<EGPI>
+			<ID>2</ID>
+			<NAME>EGOON</NAME>
+		</EGPI>
+		<EGPI>
+			<ID>3</ID>
+			<NAME>MIC2ON</NAME>
+		</EGPI>
+		<EGPI>
+			<ID>4</ID>
+			<NAME>MIC3ON</NAME>
+		</EGPI>
+		<EGPI>
+			<ID>5</ID>
+			<NAME>MIC4ON</NAME>
 		</EGPI>
 	</EmberGPIs>
 </KWire>

@@ -10,6 +10,8 @@ using System.Net;
 
 namespace KWire
 {
+    // THIS CLASS IS NO LONGER IN USE
+    // Discovered a better way of doing housekeeping - using the built in ConnectionLost event handler in the Ember lib. 
     public class HeartBeat : IDisposable
     {
         private ServiceController sc { get; set; }
