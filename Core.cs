@@ -328,40 +328,68 @@ namespace KWire
                         string sourceName = Config.Devices[i][2];
                         //Clean up the match criteria. 
 
-                        string match = CleanUpLawoDevice(devNameFromConfig);
-
-                        
-                        match = Regex.Replace(match, "Lawo R3LAY", "\r\n");
-                        match = match.Replace("(", "".Replace(")", ""));
-                        match = Regex.Replace(match, @"\s+", "");
-                        
-
-                        for (int x = 0; x < systemDevices.Count; x++)
+                        if (!Config.Dante) 
                         {
-                            // !!!!!!!!!!!!!!!!! THIS FAILS in .net CORE for some reason.!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+                            string match = CleanUpLawoDevice(devNameFromConfig);
 
-                            /*
-                             * The reason why it crashes / does not work
-                             * It should compare the names entered in config, stored in Config.Devices , with washed names (potentially), stored in systemDevices. 
-                             * Currently it gets all the data yet again, and tries to match it. Can of worms...
-                             */
 
-                            //if (Regex.IsMatch(systemDevices[x][1], @"(^|\s)" + match + @"(\s|$)"))
+                            match = Regex.Replace(match, "Lawo R3LAY", "\r\n");
+                            match = match.Replace("(", "".Replace(")", ""));
+                            match = Regex.Replace(match, @"\s+", "");
 
-                            //string devName = systemDevices[x][1];
-                            //devName = Regex.Replace(devName, "\r\n");
-
-                            if (Regex.IsMatch(systemDevices[x][1], @"(^|\s)" + match + @"(\s|$)"))
+                            for (int x = 0; x < systemDevices.Count; x++)
                             {
-                                var dev = WaveIn.GetCapabilities(x);
-                                AudioDevices.Add(new Device(x, sourceName, dev.ProductName, dev.Channels));
-                            }
 
+
+                                /*
+                                 * The reason why it crashes / does not work
+                                 * It should compare the names entered in config, stored in Config.Devices , with washed names (potentially), stored in systemDevices. 
+                                 * Currently it gets all the data yet again, and tries to match it. Can of worms...
+                                 */
+
+                                //if (Regex.IsMatch(systemDevices[x][1], @"(^|\s)" + match + @"(\s|$)"))
+
+                                //string devName = systemDevices[x][1];
+                                //devName = Regex.Replace(devName, "\r\n");
+
+                                if (Regex.IsMatch(systemDevices[x][1], @"(^|\s)" + match + @"(\s|$)"))
+                                {
+                                    var dev = WaveIn.GetCapabilities(x);
+                                    AudioDevices.Add(new Device(x, sourceName, dev.ProductName, dev.Channels));
+                                }
+
+
+                            }
 
                         }
 
+                        if (Config.Dante)
+                        {
+                            for (int x = 0; x < systemDevices.Count; x++) 
+                            {
+                                if (systemDevices[x][1].Equals(devNameFromConfig))
+                                {
+                                    var dev = WaveIn.GetCapabilities(x);
+                                    AudioDevices.Add(new Device(x, sourceName, dev.ProductName, dev.Channels));
+
+                                    if (Config.Debug) 
+                                    {
+                                        Console.WriteLine("Got a device match! Bailing out of loop ");
+                                    }
+                                    break;
+                                }
+                            }
+                            
+                        }
+                        
+
                         if (Config.Debug)
                         {
+                            if(Config.Dante) 
+                            {
+                                Console.WriteLine("Looking for Dante device");
+                            }
+                            
                             Console.WriteLine("###################################################################");
                             Console.WriteLine("");
                         }

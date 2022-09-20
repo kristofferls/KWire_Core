@@ -10,6 +10,8 @@
 		<AutoCam_BroadcastInterval>30</AutoCam_BroadcastInterval>
 		<Service_Monitor_Enabled>false</Service_Monitor_Enabled>
 		<AUDIOSERVICE_NAME>LAWO R3LAY Service Manager</AUDIOSERVICE_NAME>
+		<DHD>false</DHD>
+		<Dante>false</Dante>
 		<Debug>true</Debug>
 	</Settings>
 	<AudioDevices>

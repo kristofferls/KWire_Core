@@ -27,6 +27,8 @@ namespace KWire
         public static int AutoCam_Broadcast_Interval;
         public static string AudioServiceName;
         public static bool EmberEnabled = false;
+        public static bool Dante = false;
+        public static bool DHD = false;
         static Config() 
         {
             string CurrentDir = AppDomain.CurrentDomain.BaseDirectory;
@@ -76,6 +78,8 @@ namespace KWire
                             //XmlNode heartBeat_Interval = settingsNode.SelectSingleNode("HeartBeatInterval");
                             XmlNode audioServiceName = settingsNode.SelectSingleNode("AUDIOSERVICE_NAME");
 
+                            XmlNode dhdMixer = settingsNode.SelectSingleNode("DHD");
+                            XmlNode dante = settingsNode.SelectSingleNode("Dante");
 
 
                             //Resolve IPs and ports and store in memory for later use. Added a lot of ifs to check for errors in formatting, empty tags etc. 
@@ -100,6 +104,29 @@ namespace KWire
                                 }
                             }
 
+                            //Added Sept. 2022 - DHD and Dante support. 
+
+                            if(dhdMixer != null && (Convert.ToBoolean(dhdMixer.InnerXml)) == true) 
+                            {
+                                DHD = true;
+                                Logfile.Write("CONFIGFILE :: INFO :: Audiomixer set to DHD <3 ");
+                            }
+                            else
+                            {
+                                Logfile.Write("CONFIGFILE :: WARNING :: DHD tag not set - assuming Lawo mixer");
+                            }
+
+                            if(dante != null && (Convert.ToBoolean(dante.InnerXml)) == true) 
+                            {
+                                Dante = true;
+                                Logfile.Write("CONFIGFILE :: INFO :: Audio is set to Dante");
+
+                            }
+                            else
+                            {
+                                Logfile.Write("CONFIGFILE :: WARNING :: Dante tag not set - assuming R3Lay");
+                            }
+                             
                             // AutoCam related settings: 
 
                             if (autoCam_IP.InnerXml.Any() == false || autoCam_Port.InnerXml.Any() == false)
