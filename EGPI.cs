@@ -15,6 +15,7 @@ namespace KWire
         public DateTime? LastChange;
         private DateTime _timeOfError;
         public bool _disconnected;
+        private Task _monitor; 
         
 
         public EGPI(int id, string name)
@@ -22,6 +23,7 @@ namespace KWire
             _id = id;
             _name = name;
             _disconnected = false;
+            _monitor = null;
             Logfile.Write("EGPI :: EGPI with ID: " + _id + " and name: " + _name + " created");
             GetState();
             //string currState = currentState.ToString();
@@ -105,9 +107,26 @@ namespace KWire
         }
         public async Task MonitorState()
         {
-            Task monitor = WaitForChange();
-            await monitor.ConfigureAwait(false);
-            Reload();
+            if (_monitor != null) 
+            {
+                if (_monitor.IsCompleted == false)
+                {
+                    Logfile.Write("EGPI :: Monitor state called before old task completed! This should NOT occur!");
+                }
+            }
+            
+            else 
+            {
+                _monitor = WaitForChange();
+                await _monitor.ConfigureAwait(false);
+                if (Config.Debug && _monitor.IsCompleted == true) 
+                {
+                    Console.WriteLine("EGPI :: " + this._name + " async task completed successfully");
+                }
+                Reload();
+            }
+            
+           
                         
         }
 
@@ -117,6 +136,9 @@ namespace KWire
             {
                 
             }
+            _monitor.Dispose();
+            _monitor = null;
+
             Task.Run(() => MonitorState());
             if (Config.Debug == true) 
             {
@@ -161,7 +183,7 @@ namespace KWire
                        {
                            var mixer = (INode)root.Children.First(c => c.Identifier == "Device"); //Defined by Lawo / OnAirDesigner
                            var gpios = (INode)mixer.Children.First(c => c.Identifier == "GPO"); //Defined by Lawo / OnAirDesigner
-                           var egpio_autocam = gpios.Children.First(c => c.Description == "Redlight");//Config.Ember_ProviderName); //Set in OnAirDesigner, and is red from setting.xml.
+                           var egpio_autocam = gpios.Children.First(c => c.Description == _name);//Config.Ember_ProviderName); //Set in OnAirDesigner, and is red from setting.xml.
                             
 
                            var valueChanged = new TaskCompletionSource<string>();
