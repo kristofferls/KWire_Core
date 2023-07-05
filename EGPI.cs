@@ -16,7 +16,8 @@ namespace KWire
         private DateTime _timeOfError;
         public bool _disconnected;
         private Task _monitor; 
-        
+        private CancellationTokenSource _cts;
+        private CancellationToken _cancellationToken;
 
         public EGPI(int id, string name)
         {
@@ -155,113 +156,113 @@ namespace KWire
                 //var valueChanged = new TaskCompletionSource<string>();
                 try 
             {
-               AsyncPump.Run(
-               async () =>
-               {
+                    AsyncPump.Run(
+                    async () =>
+                    {
 
-                   using (var client = await EmberConsumer.ConnectAsync(Config.Ember_IP, Config.Ember_Port))
-                   using (var consumer = await Consumer<PowerCoreRoot>.CreateAsync(client))
-                   {
-                       INode root = consumer.Root;
+                        using (var client = await EmberConsumer.ConnectAsync(Config.Ember_IP, Config.Ember_Port))
+                        using (var consumer = await Consumer<PowerCoreRoot>.CreateAsync(client))
+                        {
+                            INode root = consumer.Root;
 
-                       if (this._disconnected == true && EmberConsumer.IsConnected == true) //DOES NOT WORK AS EXPECTED!!  
+                            if (this._disconnected == true && EmberConsumer.IsConnected == true) //DOES NOT WORK AS EXPECTED!!  
 
-                       {
+                            {
 
-                           DateTime now = new DateTime();
-                           now = DateTime.Now;
+                                DateTime now = new DateTime();
+                                now = DateTime.Now;
 
-                           TimeSpan periodOffline = now.Subtract(_timeOfError);
+                                TimeSpan periodOffline = now.Subtract(_timeOfError);
 
-                           Logfile.Write("EGPI :: WARNING :: " + this._name + " is online again! It was offline for " + periodOffline.ToString(@"hh\:mm\:ss"));
-                           this._disconnected = false;
-                       }
-
-
-                        
-                       if(Config.DHD) //Sept 2022: Added support for DHD console - it has a different tree structure to Lawo. A LOOOOT simpler. 
-                       {
-                           var mixer = (INode)root.Children.First(c => c.Identifier == "Device"); //Defined by Lawo / OnAirDesigner
-                           var gpios = (INode)mixer.Children.First(c => c.Identifier == "GPO"); //Defined by Lawo / OnAirDesigner
-                           var egpio_autocam = gpios.Children.First(c => c.Description == _name);//Config.Ember_ProviderName); //Set in OnAirDesigner, and is red from setting.xml.
-                            
-
-                           var valueChanged = new TaskCompletionSource<string>();
+                                Logfile.Write("EGPI :: WARNING :: " + this._name + " is online again! It was offline for " + periodOffline.ToString(@"hh\:mm\:ss"));
+                                this._disconnected = false;
+                            }
 
 
 
-                           //Raise an event if the value changes. 
-                           egpio_autocam.PropertyChanged += (s, e) => valueChanged.SetResult(((IElement)s).GetPath()); //Tell API that we are interested in this value if it changes. 
-
-                           Logfile.Write("EGPI :: ID: " + this._id + " NAME: " + this._name + " with path " + await valueChanged.Task + " has changed.");
-
-                           // We know that the state have changed, but to what? Read the state, and store it in memory.
-
-                           var stateParameter = egpio_autocam as IParameter;
-                           _state = Convert.ToBoolean(stateParameter.Value);
-
-                           if (_state == true)
-                           {
-                               Logfile.Write("EGPI :: " + this._name + " is ON / TRUE");
-
-                               this.LastChange = DateTime.Now;
-                           }
-                           else if (_state == false)
-                           {
-                               Logfile.Write("EGPI :: " + this._name + " is OFF / FALSE");
-
-                           }
+                            if (Config.DHD) //Sept 2022: Added support for DHD console - it has a different tree structure to Lawo. A LOOOOT simpler. 
+                            {
+                                var mixer = (INode)root.Children.First(c => c.Identifier == "Device"); //Defined by Lawo / OnAirDesigner
+                                var gpios = (INode)mixer.Children.First(c => c.Identifier == "GPO"); //Defined by Lawo / OnAirDesigner
+                                var egpio_autocam = gpios.Children.First(c => c.Description == _name);//Config.Ember_ProviderName); //Set in OnAirDesigner, and is red from setting.xml.
 
 
-                       }
-
-                       else //Traditional Lawo
-                       {
-                           var mixer = (INode)root.Children.First(c => c.Identifier == "Ruby"); //Defined by Lawo / OnAirDesigner
-                           var gpios = (INode)mixer.Children.First(c => c.Identifier == "GPIOs"); //Defined by Lawo / OnAirDesigner
-                           var egpio_autocam = (INode)gpios.Children.First(c => c.Identifier == Config.Ember_ProviderName); //Set in OnAirDesigner, and is red from setting.xml.
-                           var output_signals = (INode)egpio_autocam.Children.First(c => c.Identifier == "Output Signals"); //This name is hard coded from Lawo.
-                           var gpo = (INode)output_signals.Children.First(c => c.Identifier == this._name); //Comes from settings.xml, and needs to correspond EXACTLY with what is defined in OnAirDesigner. 
-                           var state = gpo.Children.First(c => c.Identifier == "State");//Hardcoded from Lawo. 
-
-                           var valueChanged = new TaskCompletionSource<string>();
+                                var valueChanged = new TaskCompletionSource<string>();
 
 
 
-                           //Raise an event if the value changes. 
-                           state.PropertyChanged += (s, e) => valueChanged.SetResult(((IElement)s).GetPath()); //Tell API that we are interested in this value if it changes. 
+                                //Raise an event if the value changes. 
+                                egpio_autocam.PropertyChanged += (s, e) => valueChanged.SetResult(((IElement)s).GetPath()); //Tell API that we are interested in this value if it changes. 
 
-                           Logfile.Write("EGPI :: ID: " + this._id + " NAME: " + this._name + " with path " + await valueChanged.Task + " has changed.");
+                                Logfile.Write("EGPI :: ID: " + this._id + " NAME: " + this._name + " with path " + await valueChanged.Task + " has changed.");
 
-                           // We know that the state have changed, but to what? Read the state, and store it in memory.
+                                // We know that the state have changed, but to what? Read the state, and store it in memory.
 
-                           var stateParameter = state as IParameter;
-                           _state = Convert.ToBoolean(stateParameter.Value);
+                                var stateParameter = egpio_autocam as IParameter;
+                                _state = Convert.ToBoolean(stateParameter.Value);
 
-                           if (_state == true)
-                           {
-                               Logfile.Write("EGPI :: " + this._name + " is ON / TRUE");
+                                if (_state == true)
+                                {
+                                    Logfile.Write("EGPI :: " + this._name + " is ON / TRUE");
 
-                               this.LastChange = DateTime.Now;
-                           }
-                           else if (_state == false)
-                           {
-                               Logfile.Write("EGPI :: " + this._name + " is OFF / FALSE");
+                                    this.LastChange = DateTime.Now;
+                                }
+                                else if (_state == false)
+                                {
+                                    Logfile.Write("EGPI :: " + this._name + " is OFF / FALSE");
 
-                           }
+                                }
 
-                       }
-                       
-                       
-                       /*
-                       //Should cancel the task if the connection is lost. 
-                       var connectionLost = new TaskCompletionSource<Exception>();
 
-                       consumer.ConnectionLost += (s, e) => connectionLost.SetResult(e.Exception);
-                       Console.WriteLine("EGPI " + this._name + " Connection lost!", await connectionLost.Task);
-                       */
-                   }
-               });
+                            }
+
+                            else //Traditional Lawo
+                            {
+                                var mixer = (INode)root.Children.First(c => c.Identifier == "Ruby"); //Defined by Lawo / OnAirDesigner
+                                var gpios = (INode)mixer.Children.First(c => c.Identifier == "GPIOs"); //Defined by Lawo / OnAirDesigner
+                                var egpio_autocam = (INode)gpios.Children.First(c => c.Identifier == Config.Ember_ProviderName); //Set in OnAirDesigner, and is red from setting.xml.
+                                var output_signals = (INode)egpio_autocam.Children.First(c => c.Identifier == "Output Signals"); //This name is hard coded from Lawo.
+                                var gpo = (INode)output_signals.Children.First(c => c.Identifier == this._name); //Comes from settings.xml, and needs to correspond EXACTLY with what is defined in OnAirDesigner. 
+                                var state = gpo.Children.First(c => c.Identifier == "State");//Hardcoded from Lawo. 
+
+                                var valueChanged = new TaskCompletionSource<string>();
+
+
+
+                                //Raise an event if the value changes. 
+                                state.PropertyChanged += (s, e) => valueChanged.SetResult(((IElement)s).GetPath()); //Tell API that we are interested in this value if it changes. 
+
+                                Logfile.Write("EGPI :: ID: " + this._id + " NAME: " + this._name + " with path " + await valueChanged.Task + " has changed.");
+
+                                // We know that the state have changed, but to what? Read the state, and store it in memory.
+
+                                var stateParameter = state as IParameter;
+                                _state = Convert.ToBoolean(stateParameter.Value);
+
+                                if (_state == true)
+                                {
+                                    Logfile.Write("EGPI :: " + this._name + " is ON / TRUE");
+
+                                    this.LastChange = DateTime.Now;
+                                }
+                                else if (_state == false)
+                                {
+                                    Logfile.Write("EGPI :: " + this._name + " is OFF / FALSE");
+
+                                }
+
+                            }
+
+
+                            /*
+                            //Should cancel the task if the connection is lost. 
+                            var connectionLost = new TaskCompletionSource<Exception>();
+
+                            consumer.ConnectionLost += (s, e) => connectionLost.SetResult(e.Exception);
+                            Console.WriteLine("EGPI " + this._name + " Connection lost!", await connectionLost.Task);
+                            */
+                        }
+                    }, _cancellationToken);
                 
             }
             catch(Exception error) 
@@ -322,7 +323,7 @@ namespace KWire
 
 
                        }
-                   });
+                   }, _cancellationToken);
                 }
                 catch (Exception err)
 

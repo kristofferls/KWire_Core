@@ -18,6 +18,8 @@ namespace KWire
         public static bool IsConnected;
         private static DateTime timeOfError;
         private static bool currentStatus;
+        private static CancellationTokenSource cancellationTokenSource;
+        private static CancellationToken cancellationToken;
         public static void Connect() 
     {
         if (Config.Ember_IP != null || Config.Ember_Port != 0) 
@@ -87,7 +89,7 @@ namespace KWire
                                 // Get the root of the local database.
                                 INode root = consumer.Root;
                             }
-                            });
+                            }, cancellationToken);
 
                 }
                 else 
@@ -188,7 +190,7 @@ namespace KWire
                         }
 
                         
-                    });
+                    }, cancellationToken);
 
         Logfile.Write("---------------------------EmberPlus tree end ---------------------------");
         
@@ -232,7 +234,7 @@ namespace KWire
                 
                 
             }
-        });
+        }, cancellationToken);
 
             ConnectionLostHandler();
         }

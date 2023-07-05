@@ -50,8 +50,8 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\..\OneDrive - NRK\Dev\Ember+\emberplus-sharp fra SR\ember-plus-sharp-master\Lawo.EmberPlusSharp\Lawo.EmberPlusSharp.csproj" />
-    <ProjectReference Include="..\..\..\OneDrive - NRK\Dev\Ember+\emberplus-sharp fra SR\ember-plus-sharp-master\Lawo\Lawo.csproj" />
+    <ProjectReference Include="..\..\..\Ember+\ember-plus-sharp-dev-async-pump-cancellation-token\Lawo.EmberPlusSharp\Lawo.EmberPlusSharp.csproj" />
+    <ProjectReference Include="..\..\..\Ember+\ember-plus-sharp-dev-async-pump-cancellation-token\Lawo\Lawo.csproj" />
   </ItemGroup>
 
   <ItemGroup>
