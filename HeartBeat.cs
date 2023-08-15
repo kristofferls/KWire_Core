@@ -309,29 +309,7 @@ namespace KWire
         {
 
             
-            DateTime now = DateTime.Now;
-
-            
-            DateTime? latest = Core.EGPIs.Min(r => r.LastChange); // Nullable DateTime Linq <3
-
-            if (latest != null) 
-            {
-
-                //TimeSpan ts = now - Convert.ToDateTime(latest);
-
-                //DateTime lastEGPI = Convert.ToDateTime(ts);
-
-                if (Config.Debug) 
-                {
-                    Console.WriteLine("LastEGPI was " + Convert.ToString(latest));
-                }
-
-                return latest;
-            }
-            else
-            {
-                return null;
-            }
+            return DateTime.Now;    
 
 
         }

@@ -144,8 +144,11 @@ namespace KWire
                             {
                                 if (providerName.InnerXml.Any() == false)
                                 {
-                                    Logfile.Write("CONFIGFILE :: FATAL :: Ember Provider Name not found in config! Please check KWire_Config.xml! Program terminated");
-                                    Environment.Exit(1);
+                                    if(DHD != true) 
+                                    {
+                                        Logfile.Write("CONFIGFILE :: FATAL :: Ember Provider Name not found in config! Please check KWire_Config.xml! Program terminated");
+                                        Environment.Exit(1);
+                                    }                                  
                                 }
                                 else
                                 {

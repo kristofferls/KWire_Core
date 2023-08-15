@@ -1,4 +1,6 @@
-﻿using NAudio.Wave;
+﻿using KWire_Core;
+using Microsoft.Extensions.Logging;
+using NAudio.Wave;
 using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
@@ -16,6 +18,7 @@ namespace KWire
         private string deviceName;
         private int channels;
         private float level;
+        //private readonly ILogger<Device> _logger;
 
         //
 
@@ -63,9 +66,7 @@ namespace KWire
             private set { level = value; }
         }
         
- 
-      
-        
+
 
         public void MonitorLevel()  
         
@@ -78,6 +79,7 @@ namespace KWire
            waveIn.DataAvailable += OnDataAvailable;
            waveIn.StartRecording();
 
+            //TODO: this fails when Windows denies access to the microphone due to security settings. Therefore: it needs to check it has permission somehow.. 
            
            
         }

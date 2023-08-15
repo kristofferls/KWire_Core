@@ -1,10 +1,36 @@
-﻿using Lawo.EmberPlusSharp.Model;
+﻿using KWire_Core;
+using Lawo.EmberPlusSharp.Model;
 using Lawo.Threading.Tasks;
+using Microsoft.Extensions.Logging;
 using System.Diagnostics;
+using KWire;
 
 namespace KWire
 {
-    public class EGPI
+    public class VirtualGeneralPurposeIO
+    {
+        public string Name { get; set; }
+        public IParameter TreeParameter { get; set; }
+        public bool IsActive { get; set; }
+
+    }
+
+    public class EGPI 
+    {
+        public int Id { get; set; }
+        public string Name { get; set; }
+        public bool State { get; set; } 
+              
+
+        public EGPI(int id, string name) 
+        {
+            Name = name;
+            Id = id;    
+            State = false;
+        }
+
+    }
+    public class EGPI_ //Deprecated as moving to NuGet Version of the Lawo library. Keeping it for now.. 
     {
 
         private int _id;
@@ -19,7 +45,7 @@ namespace KWire
         private CancellationTokenSource _cts;
         private CancellationToken _cancellationToken;
 
-        public EGPI(int id, string name)
+        public EGPI_(int id, string name)
         {
             _id = id;
             _name = name;

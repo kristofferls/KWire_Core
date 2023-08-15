@@ -1,8 +1,11 @@
-﻿using System;
+﻿using Microsoft.Extensions.Logging;
+using System;
 using System.Globalization;
 using System.IO;
 using System.Reflection;
 using System.Threading.Tasks;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Console;
 
 namespace KWire
 {
@@ -10,17 +13,10 @@ namespace KWire
     {
         //static int LinesWritten; Deprecated when running as service. 
 
-        /* TODO:
-         * 
-         * Create a cleanup task for old logfiles. Method is already written, but needs a caller.
-         * 
-         * 
-         * 
-         * 
-         */
-
         public static void Init()
         {
+            
+
             MainMenu();
             Write("Logfile initiated");
             DeleteOld();

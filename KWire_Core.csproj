@@ -2,7 +2,7 @@
 
   <PropertyGroup>
     <OutputType>Exe</OutputType>
-    <TargetFramework>net6.0-windows</TargetFramework>
+    <TargetFramework>net6.0-windows10.0.17763.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>disable</Nullable>
     <StartupObject>KWire.Core</StartupObject>
@@ -16,10 +16,31 @@
 		<TransformOnBuild>true</TransformOnBuild>
 		<OverwriteReadOnlyOutputFiles>true</OverwriteReadOnlyOutputFiles>
 		<TransformOutOfDateOnly>false</TransformOutOfDateOnly>
+		<ApplicationIcon>applicationsaudio_103765.ico</ApplicationIcon>
+	</PropertyGroup>
+
+	<PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
+	  <WarningLevel>5</WarningLevel>
+	</PropertyGroup>
+
+	<PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+	  <WarningLevel>5</WarningLevel>
+	</PropertyGroup>
+
+	<PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
+	  <WarningLevel>5</WarningLevel>
+	</PropertyGroup>
+
+	<PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+	  <WarningLevel>5</WarningLevel>
 	</PropertyGroup>
 
   <ItemGroup>
     <Compile Remove="WebSocketsServer.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Content Include="applicationsaudio_103765.ico" />
   </ItemGroup>
 
   <ItemGroup>
@@ -39,6 +60,9 @@
 	</ItemGroup>
 
   <ItemGroup>
+    <PackageReference Include="EmberPlus.ConsumerLib" Version="0.0.13" />
+    <PackageReference Include="Microsoft.Extensions.Logging" Version="7.0.0" />
+    <PackageReference Include="Microsoft.Extensions.Logging.Console" Version="7.0.0" />
     <PackageReference Include="NAudio" Version="2.0.1" />
     <PackageReference Include="NAudio.Asio" Version="2.0.0" />
     <PackageReference Include="NAudio.Core" Version="2.0.0" />
@@ -47,11 +71,6 @@
     <PackageReference Include="Newtonsoft.Json" Version="13.0.1" />
     <PackageReference Include="Topshelf" Version="4.3.0" />
     <PackageReference Include="websocketsharp.core" Version="1.0.0" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <ProjectReference Include="..\..\..\Ember+\ember-plus-sharp-dev-async-pump-cancellation-token\Lawo.EmberPlusSharp\Lawo.EmberPlusSharp.csproj" />
-    <ProjectReference Include="..\..\..\Ember+\ember-plus-sharp-dev-async-pump-cancellation-token\Lawo\Lawo.csproj" />
   </ItemGroup>
 
   <ItemGroup>
@@ -69,6 +88,18 @@
 
   <ItemGroup>
     <Service Include="{508349b6-6b84-4df5-91f0-309beebad82d}" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Folder Include="Models\" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Compile Update="VersionAutoIncrement.cs">
+      <DesignTime>True</DesignTime>
+      <AutoGen>True</AutoGen>
+      <DependentUpon>VersionAutoIncrement.tt</DependentUpon>
+    </Compile>
   </ItemGroup>
 
 

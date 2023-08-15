@@ -11,6 +11,11 @@ using Newtonsoft.Json;
 using System.Threading;
 using System.Text.RegularExpressions;
 using Topshelf;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Console;
+using System.Collections.Concurrent;
+using KWire_Core;
+using System.Data;
 
 namespace KWire
 {
@@ -21,18 +26,31 @@ namespace KWire
         public static List<Device> AudioDevices = new List<Device>();
         public static List<EGPI> EGPIs = new List<EGPI>();
         public static string AudioDevicesJSON;
-        public static int NumberOfGPIs;
+        //public static int NumberOfGPIs;
         public static WebSocketClient wsclient = new WebSocketClient();
-        public static bool RedlightState = false;
-        public static bool StateChanged = false;
+        //public static bool RedlightState = false;
+        //public static bool StateChanged = false;
+        public static ILogger<EmberConsumerService> emberLogger;
+        public static EmberConsumerService emberConsumer; 
 
         static void Main(string[] args)
         {
+            using var loggerFactory = LoggerFactory.Create(builder =>
+            {
+                builder
+                    .AddFilter("Microsoft", LogLevel.Warning)
+                    .AddFilter("System", LogLevel.Warning)
+                    .AddFilter("LoggingConsoleApp.Program", LogLevel.Debug)
+                    .AddConsole();
+            });
 
-            
+            emberLogger = loggerFactory.CreateLogger<EmberConsumerService>();
+            emberLogger.LogInformation("EmberConsumerLogger created");
 
-                // TOPSHELF SERVICE
-                var exitCode = HostFactory.Run(x =>
+           
+
+            // TOPSHELF SERVICE
+            var exitCode = HostFactory.Run(x =>
                 {
                     bool arg = false;
 
@@ -99,9 +117,8 @@ namespace KWire
             }
             else if (Config.EmberEnabled == true)
             {
-
-               EmberConsumer.Connect(); //Connect to the Ember provider
-               EmberConsumer.PrintEmberTree(); // Test the connection by printing the deviceTree. 
+                emberConsumer = new EmberConsumerService(emberLogger, Config.Ember_IP, Config.Ember_Port);
+                emberConsumer.ConfigureEmberConsumer(); //make the connection!                 
             }
             else 
             {
@@ -148,29 +165,29 @@ namespace KWire
             Logfile.Write("");
             Logfile.Write("MAIN :: >>>>>>> Startup Complete <<<<<<<<");
         }
-        public static void TestMethod() 
-        {
-            var testGPI = new EGPI(1, "REDLIGHT");
-
-            testGPI.GetCurrentState();
-
-            Console.ReadKey();
         
-        }
         public static async Task BroadcastToAutoCam() 
         {
-            /*
-            if (Config.Debug) 
-            {
-                var now = DateTime.Now; 
-                Console.WriteLine("Broadcast to AutoCam started @: " + now.ToString());
-            }
-            */
-            // Serialize both lists of Audio and EGPIs to JSON: 
-
-            
             await Task.Run(() =>
             {
+                
+                //Update the EGPIs with the current state of 
+                foreach(var egpi in Core.EGPIs) 
+                {
+                    foreach (var emberGPO in emberConsumer.LogicOutputsList) 
+                    {
+                        if(emberGPO.Identifier == egpi.Name) 
+                        {                         
+                            if (egpi.State != emberGPO.LogicState) 
+                            {
+                                egpi.State = emberGPO.LogicState;
+                                Logfile.Write("EGPI " + egpi.Name + " : STATE CHANGED - is now: " +  egpi.State);
+                            }                            
+                        }
+                    }
+                }
+                
+                
                 var json = (JsonConvert.SerializeObject(AudioDevices));
                 var json2 = JsonConvert.SerializeObject(EGPIs);
 
@@ -192,13 +209,7 @@ namespace KWire
                 wsclient.SendJSON(JSONString);
 
             });                     
-            /*
-            if (Config.Debug) 
-            {
-                var now = DateTime.Now;
-                Console.WriteLine("Broadcast to AutoCam completed @ " + now.ToString());
-            }
-            */
+
                         
         }
 
@@ -247,9 +258,6 @@ namespace KWire
 
         }
 
-        /// <summary>
-        /// 
-        /// </summary>
         public static void ConfigureAudioDevices()
         {
             // Gets info on all available recording devices, and creates an array of AudioDevice-objects. 
@@ -277,7 +285,7 @@ namespace KWire
                         Console.WriteLine("Device" + dev.ProductName + " is a LAWO Device - will clean up the dev-name to avoid confusion");
                     }
 
-                    string devNameClean = CleanUpLawoDevice(dev.ProductName);
+                    string devNameClean = CleanUpAudioDeviceName(dev.ProductName);
                     
                     string[] adev = { Convert.ToString(i), devNameClean.TrimEnd(), Convert.ToString(dev.Channels) };
                     systemDevices.Add(adev); // Add complete device to list.
@@ -330,12 +338,13 @@ namespace KWire
 
                         if (!Config.Dante) 
                         {
-                            string match = CleanUpLawoDevice(devNameFromConfig);
+                            string match = CleanUpAudioDeviceName(devNameFromConfig);
 
 
                             match = Regex.Replace(match, "Lawo R3LAY", "\r\n");
                             match = match.Replace("(", "".Replace(")", ""));
                             match = Regex.Replace(match, @"\s+", "");
+                            match = match.ToUpper();
 
                             for (int x = 0; x < systemDevices.Count; x++)
                             {
@@ -418,15 +427,25 @@ namespace KWire
             
         }
 
-        private static string CleanUpLawoDevice(string devName) 
+        private static string CleanUpAudioDeviceName(string devName) 
         {
-            // will add a LAWO device - with all that entails..
-            string devNameClean = Regex.Replace(devName, "Lawo R3LAY WD", "\r\n"); //Removes the "Lawo R3LAY WD shit from the first device that has no number in its name. 
-            devNameClean = Regex.Replace(devNameClean, "R3LAY", "\r\n"); //Removes the "Lawo R3LAY shit from the rest of the dev-names that has a number in its name. 
-            devNameClean = Regex.Replace(devNameClean, "Lawo R3LAY", "\r\n"); //Removes the "Lawo R3LAY shit from the rest of the dev-names that has a number in its name. 
-            devNameClean = Regex.Replace(devNameClean, "Lawo", "\r\n"); //Removes the "Lawo R3LAY shit from the rest of the dev-names that has a number in its name. 
-            devNameClean = devNameClean.Replace("(", ""); // Removes the ( from the string
-            devNameClean = Regex.Replace(devNameClean, @"\s+", ""); //Removes all whitespaces in the name. 
+            ///Cleans up the device name coming from the OS. The device name gets trunkated, and needs therefore a cleanup in order to get a match with
+            ///what the user has set in the config file. 
+            ///Words/phrases to be squashed can be added to the invalidWords array below. 
+
+            
+            string[] invalidWords = { "Lawo", "R3Lay", "High Definition", "High Definito", "WD", "WDM" };
+            devName = devName.ToUpper();
+            string devNameClean = devName;
+            devNameClean = Regex.Replace(devNameClean, @"[^\w\.@-]", ""); //Get rid of invalid chars like paratheses, brackets etc. 
+
+            foreach ( string word in invalidWords) 
+            {
+                string pattern = ("'*" + word + "*.+").ToUpper(); //Gets rid of any traces of the 
+                devNameClean = Regex.Replace(devNameClean, pattern, string.Empty );
+                
+            }      
+
 
             return devNameClean;
 
