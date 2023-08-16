@@ -179,6 +179,8 @@ namespace KWire
                                 AudioServiceName = audioServiceName.InnerXml;
                             }
 
+                            /*To be implemented - a service monitor check. 
+                             * 
                             if (audioServiceName.InnerXml.Any() != false && serviceMonitor.InnerXml.Any() != false) 
                             {
                                 if(Convert.ToBoolean(serviceMonitor.InnerXml))
@@ -191,7 +193,7 @@ namespace KWire
                                     Environment.Exit(1);
                                 }
                             }
-
+                            */
                            
                         }
                     }
