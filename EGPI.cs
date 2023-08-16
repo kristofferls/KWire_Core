@@ -12,6 +12,7 @@ namespace KWire
 
     public class EGPI 
     {
+        public string Type { get; set; }
         public int Id { get; set; }
         public string Name { get; set; }
         public bool State { get; set; } 
@@ -19,6 +20,7 @@ namespace KWire
 
         public EGPI(int id, string name) 
         {
+            Type = "GPO"; //Hardcoded, to make AutoCam parsing easier. 
             Name = name;
             Id = id;    
             State = false;
