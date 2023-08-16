@@ -80,7 +80,7 @@ namespace KWire
            waveIn.StartRecording();
 
             //TODO: this fails when Windows denies access to the microphone due to security settings. Therefore: it needs to check it has permission somehow.. 
-           
+
            
         }
 

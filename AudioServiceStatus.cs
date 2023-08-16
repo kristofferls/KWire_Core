@@ -9,7 +9,7 @@ namespace KWire
 {
     public class AudioService
     {
-        private ServiceController sc;
+        //private ServiceController sc;
 
         public bool Status ()
         {
@@ -17,15 +17,16 @@ namespace KWire
 
             if (serviceInstalled) //If the Service does exist 
             {
-                sc = new ServiceController(Config.AudioServiceName);
+                //sc = new ServiceController(Config.AudioServiceName);
 
-                
+                using(ServiceController sc = new ServiceController(Config.AudioServiceName)) 
+                {
                     if (sc.Status.Equals(ServiceControllerStatus.Stopped))
                     {
                         Logfile.Write("AUDIOSERVICE :: STATUS :: Service was stopped - trying to start");
                         //Service is not running - start it. 
 
-                        bool status = StartService();
+                        bool status = StartService(sc);
 
                         if (status != true)
                         {
@@ -37,7 +38,7 @@ namespace KWire
                             Logfile.Write("AUDIOSERVICE :: STATUS :: Service started");
                             return true;
                         }
-                        
+
                     }
 
                     else if (sc.Status.Equals(ServiceControllerStatus.Running))
@@ -49,7 +50,7 @@ namespace KWire
                     else if (sc.Status.Equals(ServiceControllerStatus.Paused)) //Rare edge-case should not happen
                     {
                         Logfile.Write("AUDIOSERVICE :: WARNING :: AudioService is paused for some reason..");
-                        bool status = StartService();
+                        bool status = StartService(sc);
 
                         if (status != true)
                         {
@@ -67,6 +68,9 @@ namespace KWire
                     {
                         return false;
                     }
+                }
+                
+
 
 
             }
@@ -88,7 +92,7 @@ namespace KWire
             return service != null;
         }
 
-        private bool StartService() 
+        private bool StartService(ServiceController sc) 
         {
             sc.Start();
             if (sc.Status.Equals(ServiceControllerStatus.StartPending) || sc.Status.Equals(ServiceControllerStatus.Stopped)) 
@@ -122,6 +126,61 @@ namespace KWire
             
         }
 
+        public bool StatusCheck() 
+        {
+            using (ServiceController sc = new ServiceController(Config.AudioServiceName))
+            {
+                if (sc.Status.Equals(ServiceControllerStatus.Stopped) || sc.Status.Equals(ServiceControllerStatus.StopPending) )
+                {
+                    Logfile.Write("AUDIOSERVICE :: STATUS :: Service has stopped - trying to start");
+                    //Service is not running - start it. 
+
+                    bool status = StartService(sc);
+
+                    if (status != true)
+                    {
+                        Logfile.Write("AUDIOSERVICE :: WARNING :: AudioService not running - might have fatal consequences!");
+                        return false;
+                    }
+                    else if (status == true)
+                    {
+                        Logfile.Write("AUDIOSERVICE :: STATUS :: Service started");
+                        return true;
+                    }
+
+                }
+
+                else if (sc.Status.Equals(ServiceControllerStatus.Running))
+                {
+                    Logfile.Write("AUDIOSERVICE :: STATUS :: The canary is alive and singing - all is well!");
+                    return true;
+                }
+
+                else if (sc.Status.Equals(ServiceControllerStatus.Paused)) //Rare edge-case should not happen
+                {
+                    Logfile.Write("AUDIOSERVICE :: WARNING :: AudioService is paused for some reason..");
+                    bool status = StartService(sc);
+
+                    if (status != true)
+                    {
+                        Logfile.Write("AUDIOSERVICE :: WARNING :: AudioService not running - might have fatal consequences!");
+                        return false;
+                    }
+                    else if (status == true)
+                    {
+                        Logfile.Write("AUDIOSERVICE :: STATUS :: The canary is alive and singing - all is well!");
+                        return true;
+                    }
+
+                }
+                else
+                {
+                    return false;
+                }
+            }
+            return false; 
+
+        }
 
     }
 }

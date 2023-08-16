@@ -22,10 +22,9 @@ namespace KWire
         public static int Sources;
         public static string Ember_ProviderName;
         private static string ConfigFile;
-        public static bool HeartBeatEnabled = false;
-        public static int HeartBeatInterval;
         public static int AutoCam_Broadcast_Interval;
         public static string AudioServiceName;
+        public static bool ServiceMonitor = false; 
         public static bool EmberEnabled = false;
         public static bool Dante = false;
         public static bool DHD = false;
@@ -77,6 +76,8 @@ namespace KWire
                             XmlNode autoCam_BroadcastInterval = settingsNode.SelectSingleNode("AutoCam_BroadcastInterval");
                             //XmlNode heartBeat_Interval = settingsNode.SelectSingleNode("HeartBeatInterval");
                             XmlNode audioServiceName = settingsNode.SelectSingleNode("AUDIOSERVICE_NAME");
+
+                            XmlNode serviceMonitor = settingsNode.SelectSingleNode("Service_Monitor_Enabled");
 
                             XmlNode dhdMixer = settingsNode.SelectSingleNode("DHD");
                             XmlNode dante = settingsNode.SelectSingleNode("Dante");
@@ -167,7 +168,8 @@ namespace KWire
                             {
                                 AutoCam_Broadcast_Interval = Convert.ToInt32(autoCam_BroadcastInterval.InnerXml);
                             }
-                            
+                            // Monitoring of audio service - if any. 
+
                             if (audioServiceName.InnerXml.Any() == false) 
                             {
                                 Logfile.Write("CONFIGFILE :: WARN :: Tag <AUDIOSERVICE_NAME> is empty - will have no power to check it's status");
@@ -175,6 +177,19 @@ namespace KWire
                             else
                             {
                                 AudioServiceName = audioServiceName.InnerXml;
+                            }
+
+                            if (audioServiceName.InnerXml.Any() != false && serviceMonitor.InnerXml.Any() != false) 
+                            {
+                                if(Convert.ToBoolean(serviceMonitor.InnerXml))
+                                {
+                                    ServiceMonitor = Convert.ToBoolean(serviceMonitor.InnerXml);  
+                                }
+                                else
+                                {
+                                    Logfile.Write("CONFIGFILE :: WARN :: Could not convert <Service_Monitor_Enabled> to either true or false. Spelling? ");
+                                    Environment.Exit(1);
+                                }
                             }
 
                            

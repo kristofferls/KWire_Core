@@ -1,12 +1,18 @@
 ﻿<?xml version="1.0"?>
 <KWire>
 	<Settings>
+		<Ember_Enabled>true</Ember_Enabled>
 		<Ember_IP>127.0.0.1</Ember_IP>
 		<Ember_Port>9000</Ember_Port>
 		<Ember_ProviderName>EGPIO_AUTOCAM</Ember_ProviderName>
 		<AutoCam_IP>127.0.0.1</AutoCam_IP>
 		<AutoCam_Port>5500</AutoCam_Port>
-		<Debug>false</Debug>
+		<AutoCam_BroadcastInterval>30</AutoCam_BroadcastInterval>
+		<Service_Monitor_Enabled>false</Service_Monitor_Enabled>
+		<AUDIOSERVICE_NAME></AUDIOSERVICE_NAME>
+		<DHD>true</DHD>
+		<Dante>false</Dante>
+		<Debug>true</Debug>
 	</Settings>
 	<AudioDevices>
 		<Device>

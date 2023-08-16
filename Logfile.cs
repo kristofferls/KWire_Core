@@ -4,8 +4,7 @@ using System.Globalization;
 using System.IO;
 using System.Reflection;
 using System.Threading.Tasks;
-using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Logging.Console;
+
 
 namespace KWire
 {
@@ -78,9 +77,9 @@ namespace KWire
             //Console.WriteLine(version); // -> "1.1.2.10"
             //Version v = Assembly.GetExecutingAssembly().GetName().Version;
             //string About = string.Format(CultureInfo.InvariantCulture, @"Mandozzi Communication Server Service {0}.{1}.{2} (r{3})", v.Major, v.Minor, v.Build, v.Revision);
-            Write("#####################################################################");
-            Write("KWire AES67 to AutoCam .NET CORE v " + version + " by Kristoffer L-S");
-            Write("#####################################################################");
+            Write("##################################################################################");
+            Write("KWire Ember+ AudioLevel to AutoCam .NET CORE v " + version);
+            Write("##################################################################################");
             Write("");
             Write("Please report errors to kristoffer@nrk.no");
             Write("");

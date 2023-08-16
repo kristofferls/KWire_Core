@@ -47,8 +47,6 @@ namespace KWire
             emberLogger = loggerFactory.CreateLogger<EmberConsumerService>();
             emberLogger.LogInformation("EmberConsumerLogger created");
 
-           
-
             // TOPSHELF SERVICE
             var exitCode = HostFactory.Run(x =>
                 {
@@ -77,7 +75,7 @@ namespace KWire
 
                         x.RunAsLocalSystem();
                         x.SetServiceName("KWireService");
-                        x.SetDisplayName("KWire: AutoCam AES67 Ember+ Translator");
+                        x.SetDisplayName("KWire: Ember+ audiolevel -> AutoCam bridge");
                         x.SetDescription("A service that taps audio inputs and Ember+ messages and translates to AutoCam. Written by kristoffer@nrk.no");
 
                         x.EnableServiceRecovery(src =>
@@ -160,7 +158,7 @@ namespace KWire
                 Logfile.Write("MAIN :: ERROR :: No valid AutoCam IP or Port found in config! Please check Config.xml");
             }
 
-            //JSONExport(); //Create a JSON file containing all available Device IDS. 
+            JSONExport(); //Create a JSON file that mimics the AutoCam data being sent over websocet. To make debugging AutoCam easier.. 
 
             Logfile.Write("");
             Logfile.Write("MAIN :: >>>>>>> Startup Complete <<<<<<<<");
@@ -171,7 +169,7 @@ namespace KWire
             await Task.Run(() =>
             {
                 
-                //Update the EGPIs with the current state of 
+                //Update the EGPIs with the current state from EmberConsumerService. 
                 foreach(var egpi in Core.EGPIs) 
                 {
                     foreach (var emberGPO in emberConsumer.LogicOutputsList) 
@@ -186,27 +184,9 @@ namespace KWire
                         }
                     }
                 }
-                
-                
-                var json = (JsonConvert.SerializeObject(AudioDevices));
-                var json2 = JsonConvert.SerializeObject(EGPIs);
-
-                //Convert JSON-strings to string for modification
-                string serializedAudioDevices = json.ToString();
-                string serializedEGPIS = json2.ToString();
-                //In order to merge the two strings, some chars added by the Serializer needs to be removed, and others added, so that the two strings can be combined. 
-                serializedAudioDevices = serializedAudioDevices.Replace("]", ",");
-                serializedEGPIS = serializedEGPIS.Replace("[", "");
-
-                //Create a new JSONstring of the two different types. 
-                string JSONString = serializedAudioDevices + serializedEGPIS;
-
-                //Clean up
-                JSONString = JSONString += "]";
-                JSONString = JSONString.Replace("}]]", "}]");
 
                 //Send to WebSocketClient / NodeJS over dgram / UDP. 
-                wsclient.SendJSON(JSONString);
+                wsclient.SendJSON(SerializeToJSON());
 
             });                     
 
@@ -341,10 +321,10 @@ namespace KWire
                             string match = CleanUpAudioDeviceName(devNameFromConfig);
 
 
-                            match = Regex.Replace(match, "Lawo R3LAY", "\r\n");
-                            match = match.Replace("(", "".Replace(")", ""));
-                            match = Regex.Replace(match, @"\s+", "");
-                            match = match.ToUpper();
+                            //match = Regex.Replace(match, "Lawo R3LAY", "\r\n");
+                            //match = match.Replace("(", "".Replace(")", ""));
+                            //match = Regex.Replace(match, @"\s+", "");
+                            //match = match.ToUpper();
 
                             for (int x = 0; x < systemDevices.Count; x++)
                             {
@@ -361,7 +341,14 @@ namespace KWire
                                 //string devName = systemDevices[x][1];
                                 //devName = Regex.Replace(devName, "\r\n");
 
-                                if (Regex.IsMatch(systemDevices[x][1], @"(^|\s)" + match + @"(\s|$)"))
+                                if (Config.Debug) 
+                                {
+                                    Console.WriteLine("Match is " + match);
+                                    Console.WriteLine("systemDevices name is: " + systemDevices[x][1]);
+                                }
+
+
+                                if (Regex.IsMatch(systemDevices[x][1], @"(^|\s)" + match + @"(\s|$)")) 
                                 {
                                     var dev = WaveIn.GetCapabilities(x);
                                     AudioDevices.Add(new Device(x, sourceName, dev.ProductName, dev.Channels));
@@ -432,30 +419,42 @@ namespace KWire
             ///Cleans up the device name coming from the OS. The device name gets trunkated, and needs therefore a cleanup in order to get a match with
             ///what the user has set in the config file. 
             ///Words/phrases to be squashed can be added to the invalidWords array below. 
+            ///
 
+            /// Pseudo: 
+            /// Get a audio device name string. 
+            /// Remove confusion
+            ///     - Get rid of all chars including ( if at the end of a string. 
+           
+            /// Return a more machine comparable name. 
+
+
+            if(Config.Debug) 
+            {
+                Console.WriteLine("CleanUpAudioDeviceName: devName is: " +  devName);
+            }
             
-            string[] invalidWords = { "Lawo", "R3Lay", "High Definition", "High Definito", "WD", "WDM" };
+            string[] invalidWords = { "Lawo", "High Definition", "High", "Realtek"};
             devName = devName.ToUpper();
             string devNameClean = devName;
-            devNameClean = Regex.Replace(devNameClean, @"[^\w\.@-]", ""); //Get rid of invalid chars like paratheses, brackets etc. 
+
 
             foreach ( string word in invalidWords) 
             {
-                string pattern = ("'*" + word + "*.+").ToUpper(); //Gets rid of any traces of the 
-                devNameClean = Regex.Replace(devNameClean, pattern, string.Empty );
-                
-            }      
 
+                string pattern = "[()]*" + word.ToUpper() + ".*"; //Will catch (Lawo R3Lay etc. and remove all that is behind it. 
+                devNameClean = Regex.Replace(devNameClean, pattern, string.Empty);
+
+            }
+
+            if (Config.Debug)
+            {
+                Console.WriteLine("CleanUpAudioDeviceName: devNameClean is: " + devNameClean);
+            }
 
             return devNameClean;
 
         }
-
-        private static void AddGenericDevice() 
-        {
-            throw new NotImplementedException();
-        }
-
 
         public static void DisplayAudioDevices() 
         {
@@ -467,25 +466,41 @@ namespace KWire
         
         }
         
+        private static string SerializeToJSON()              
+        {
+            var audioDevicesJSON = (JsonConvert.SerializeObject(AudioDevices));
+            var eGPIsJSON = JsonConvert.SerializeObject(EGPIs);
+
+            //Convert JSON-strings to string for modification
+            
+            string serializedAudioDevices = audioDevicesJSON.ToString();
+            string serializedEGPIS = eGPIsJSON.ToString();
+
+            //In order to merge the two strings, some chars added by the Serializer needs to be removed, and others added, so that the two strings can be combined. 
+            serializedAudioDevices = serializedAudioDevices.Replace("]", ",");
+            serializedEGPIS = serializedEGPIS.Replace("[", "");
+
+            //Create a new JSONstring of the two different types. 
+            string JSONString = serializedAudioDevices + serializedEGPIS;
+
+            //Clean up
+            JSONString = JSONString += "]";
+            JSONString = JSONString.Replace("}]]", "}]");
+
+            return JSONString;
+
+        } 
         private static void JSONExport() 
         {
             
             string ProgramPath = AppDomain.CurrentDomain.BaseDirectory;
-            string filePath = ProgramPath + "AudioDevices.json";
-            string filePath2 = ProgramPath + "JSONStructure.json";
+            string jSONfilePath = ProgramPath + "JSON-AutoCam-Structure-example.json";
             var audioDevices = new { audioDevices = AudioDevices };
 
-            var json = (JsonConvert.SerializeObject(audioDevices));
-            var json2 = (JsonConvert.SerializeObject(AudioDevices));
-            json2 = json2 + (JsonConvert.SerializeObject(EGPIs));
-            System.IO.File.WriteAllText(filePath, json);
-            System.IO.File.WriteAllText(filePath2, json2);
+            System.IO.File.WriteAllText(jSONfilePath, SerializeToJSON());
 
-            Logfile.Write("MAIN :: JSONExport :: Exporting device info to JSON-file: " + filePath);
+            Logfile.Write("MAIN :: JSONExport :: Wrote: " + jSONfilePath);
         }
-
-        
-
-       
+  
     }
 }

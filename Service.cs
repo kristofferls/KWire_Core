@@ -5,11 +5,13 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Timers;
 
+
 namespace KWire
 {
     public class Kwire_Service
     {
         private readonly System.Timers.Timer _timer;
+        private readonly System.Timers.Timer _ServiceCheckTimer;
         
         
         //private DateTime _lastHeartBeat;
@@ -27,8 +29,14 @@ namespace KWire
                 //_timer.Elapsed += TimerElapsed;
                 _timer.Elapsed += UpdateAutoCam;
                 Logfile.Write("KWire Service :: AutoCam Broadcast interval in ms is : " + Convert.ToString(Config.AutoCam_Broadcast_Interval));
-                
-                             
+
+                if (Config.AudioServiceName != null && Config.ServiceMonitor == true) 
+                {
+                    
+                    /// To be implemented at a later date 16.08.2023. 
+                    //_ServiceCheckTimer = new System.Timers.Timer(60000) { AutoReset=true };
+                    //_ServiceCheckTimer.Elapsed += CheckServiceStatus;
+                }
 
                 Logfile.Write("KWire Service :: Constructor done");
             } 
@@ -43,7 +51,12 @@ namespace KWire
             
 
         }
-       
+
+        private async void CheckServiceStatus(object sender, ElapsedEventArgs e)
+        {
+            throw new NotImplementedException();
+        }
+
         private void DumpRawDataToLog() 
         {
             if (Config.Debug == false) 
@@ -81,7 +94,7 @@ namespace KWire
         private async void UpdateAutoCam(object sender, ElapsedEventArgs e) 
         {
                        
-            if (Config.EmberEnabled || EmberConsumer.IsConnected) 
+            if (Config.EmberEnabled) 
             {
                 Task broadcast = Core.BroadcastToAutoCam();
                 await broadcast.ConfigureAwait(false);
@@ -91,27 +104,7 @@ namespace KWire
                 Task broadcast = Core.BroadcastToAutoCam_NoEmber();
                 await broadcast.ConfigureAwait(false);
             }
-            /*
-            try
-            {
-                Task.Run(() => { Core.BroadcastToAutoCam() });
-                broadcast.Start();
-                broadcast.Wait(Config.AutoCam_Broadcast_Interval / 2);
-                bool completed = broadcast.IsCompleted;
 
-                if (!completed) 
-                {
-                    broadcast.Dispose();
-                    Logfile.Write("SERVICE :: UpdateAutoCam :: Task did not complete in " + Convert.ToString((Config.AutoCam_Broadcast_Interval / 2)) + " ms!");
-                }
-                broadcast.Dispose();
-            }
-            catch (AggregateException)
-            {
-                Logfile.Write("SERVICE :: UpdateAutoCam ::  EXCEPTION :: ");
-                
-            } 
-            */
 
         }
 

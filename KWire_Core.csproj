@@ -36,6 +36,8 @@
 	</PropertyGroup>
 
   <ItemGroup>
+    <Compile Remove="Deprecated\EmberConsumer.cs" />
+    <Compile Remove="Deprecated\HeartBeat.cs" />
     <Compile Remove="WebSocketsServer.cs" />
   </ItemGroup>
 
@@ -44,6 +46,8 @@
   </ItemGroup>
 
   <ItemGroup>
+    <None Include="Deprecated\EmberConsumer.cs" />
+    <None Include="Deprecated\HeartBeat.cs" />
     <None Include="Deprecated\WebSocketsServer.cs" />
     <None Include="VersionAutoIncrement.cs">
       <DesignTime>True</DesignTime>
