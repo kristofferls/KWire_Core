@@ -84,7 +84,7 @@ namespace KWire
 
                 foreach(var egpio in Core.EGPIs) 
                 {
-                    Console.WriteLine("EGPIO Name is: " + egpio.Name);   
+                    Console.WriteLine("EGPIO Name is: " + egpio.Key);   
                 }
 
             }

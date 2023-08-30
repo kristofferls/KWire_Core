@@ -17,17 +17,18 @@ namespace KWire
         public static int AutoCam_Port = 0;
         //public static int[] DeviceIDs; // depr. 
         public static bool Debug = false;
-        public static string[,] EGPIs;
+        //public static string[,] EGPIs;
         public static List<string[]> Devices; 
         public static int Sources;
         public static string Ember_ProviderName;
-        private static string ConfigFile;
+        public static string ConfigFile;
         public static int AutoCam_Broadcast_Interval;
         public static string AudioServiceName;
         public static bool ServiceMonitor = false; 
         public static bool EmberEnabled = false;
         public static bool Dante = false;
         public static bool DHD = false;
+        
         static Config() 
         {
             string CurrentDir = AppDomain.CurrentDomain.BaseDirectory;
@@ -306,11 +307,12 @@ namespace KWire
 
                 Logfile.Write("-----------------------< Finished reading config > --------------------------");
 
-                
+                /*
                 if (emberEnabled == true) 
                 {
                     ConfigureEGPI(); //Converted to method as the same feature is used by HeartBeat to restart the show if something fails
                 }
+                */
                 
             }
             else
@@ -320,6 +322,9 @@ namespace KWire
             }// END OF XML parsing. 
         }
 
+        /*
+         * Moved to Core - it does not belong in the config file to configure stuff. 
+         * 
         public static void ConfigureEGPI() 
         {
             // Ember-GPIS in config. 
@@ -386,6 +391,6 @@ namespace KWire
 
             
         }
-
+        */
     }
 }

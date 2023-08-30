@@ -16,6 +16,8 @@ using KWire_Core.Models.DHD;
 using KWire_Core.Models.Lawo;
 using System.Runtime.CompilerServices;
 using System.Data.Common;
+using System.Data;
+using Windows.Media.Playback;
 
 namespace KWire_Core
 {
@@ -207,19 +209,6 @@ namespace KWire_Core
 
         }
 
-        public void UpdateEGPIs() 
-        {
-            if(Core.EGPIs != null) 
-            {
-                foreach (var item in Core.EGPIs) 
-                {
-                    if(item.Name == Identifier) 
-                    {
-                        item.State = LogicState;                        
-                    }
-                }
-            }
-        }
     }
 
     public class EmberPlusDhdConsumer : IEmberPlusConsumer
@@ -297,11 +286,47 @@ namespace KWire_Core
                                     IsActive = ev.LogicState,
                                 };
                                 LogicOutputs.GetOrAdd(stateParameter.Description, logicOut);
+
+                                //Check if changed EGPIO is one listed as a logic of interest in List EGPI in Core: 
+                                UpdateEGPIList(stateParameter.Description, logicOut.IsActive);
                             }
                         }
                     }
                 });
             }
+        }
+
+        private void UpdateEGPIList(string Description, bool state) 
+        {
+            if (Core.EGPIs != null) 
+            {
+                //try get the ID
+                var _egpi = new EGPI();
+                
+                
+                bool idexists = Core.EGPIs.TryGetValue(Description, out _egpi);
+
+
+                if (idexists && _egpi.Id != null)  
+                {
+                    _logger.LogInformation("Got a match in Core.EGPIs dicitonary : " + Description + " == " + _egpi.Name);
+                    _logger.LogInformation("State was: " + _egpi.State.ToString() + " New state is: " + state.ToString());
+
+                    Core.EGPIs.AddOrUpdate(Description, new EGPI()
+                    {
+                        Name = Description,
+                        Id = _egpi.Id,
+                        State = state
+                    }, (key, oldValue) => 
+                    { 
+                        oldValue.State = state;
+                        return oldValue;
+                    });;
+                }
+
+            }
+            
+        
         }
 
         private void LogicOutputStateParameter_PropertyChanged(object? sender, PropertyChangedEventArgs e)
@@ -319,11 +344,14 @@ namespace KWire_Core
                     Name = data.Parent.Description,
                     TreeParameter = data,
                     IsActive = ev.LogicState,
+
                 }, (key, oldValue) =>
                 {
                     oldValue.IsActive = ev.LogicState;
                     return oldValue;
-                });
+                });;
+
+                UpdateEGPIList(data.Description, (bool)data.Value);
 
                 _logger.LogInformation($"{data.Description} changed to {(bool)data.Value}");
             }

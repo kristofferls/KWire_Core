@@ -16,6 +16,7 @@ using Microsoft.Extensions.Logging.Console;
 using System.Collections.Concurrent;
 using KWire_Core;
 using System.Data;
+using System.Xml;
 
 namespace KWire
 {
@@ -24,7 +25,8 @@ namespace KWire
          
         public static int NumberOfAudioDevices = WaveIn.DeviceCount;
         public static List<Device> AudioDevices = new List<Device>();
-        public static List<EGPI> EGPIs = new List<EGPI>();
+        //public static List<EGPI> EGPIs = new List<EGPI>();
+        public static ConcurrentDictionary<string, EGPI> EGPIs { get; set; } = new ConcurrentDictionary<string, EGPI>();
         public static string AudioDevicesJSON;
         //public static int NumberOfGPIs;
         public static WebSocketClient wsclient = new WebSocketClient();
@@ -115,8 +117,10 @@ namespace KWire
             }
             else if (Config.EmberEnabled == true)
             {
+                ConfigureEGPI();
                 emberConsumer = new EmberConsumerService(emberLogger, Config.Ember_IP, Config.Ember_Port);
-                emberConsumer.ConfigureEmberConsumer(); //make the connection!                 
+                emberConsumer.ConfigureEmberConsumer(); //make the connection!
+                                                        
             }
             else 
             {
@@ -140,12 +144,6 @@ namespace KWire
             ConfigureAudioDevices();
             DisplayAudioDevices();
 
-            if (Config.EmberEnabled == true) 
-            {
-                Config.ConfigureEGPI();
-            }
-            
-
 
             if (Config.AutoCam_IP != null || Config.AutoCam_Port != 0)
             {
@@ -168,26 +166,7 @@ namespace KWire
         {
             await Task.Run(() =>
             {
-                
-                //Update the EGPIs with the current state from EmberConsumerService. 
-                foreach(var egpi in Core.EGPIs) 
-                {
-                    foreach (var emberGPO in emberConsumer.LogicOutputsList) 
-                    {
-                        if(emberGPO.Identifier == egpi.Name) 
-                        {                         
-                            if (egpi.State != emberGPO.LogicState) 
-                            {
-                                egpi.State = emberGPO.LogicState;
-                                Logfile.Write("EGPI " + egpi.Name + " : STATE CHANGED - is now: " +  egpi.State);
-                            }                            
-                        }
-                    }
-                }
-
-                //Send to WebSocketClient / NodeJS over dgram / UDP. 
                 wsclient.SendJSON(SerializeToJSON());
-
             });                     
 
                         
@@ -348,7 +327,7 @@ namespace KWire
                                 }
 
 
-                                if (Regex.IsMatch(systemDevices[x][1], @"(^|\s)" + match + @"(\s|$)")) 
+                                if (Regex.IsMatch(systemDevices[x][1].ToUpper(), @"(^|\s)" + match + @"(\s|$)")) 
                                 {
                                     var dev = WaveIn.GetCapabilities(x);
                                     AudioDevices.Add(new Device(x, sourceName, dev.ProductName, dev.Channels));
@@ -414,6 +393,68 @@ namespace KWire
             
         }
 
+        public static void ConfigureEGPI()
+        {
+            // Ember-GPIS in config. 
+
+            XmlDocument xml = new XmlDocument();
+            xml.Load(Config.ConfigFile);
+            string xmlContents = xml.InnerXml;
+            xml.LoadXml(xmlContents);
+
+
+
+            XmlNodeList eGPIList = xml.SelectNodes("/KWire/EmberGPIs/EGPI");
+
+            if (eGPIList.Count != 0)
+            {
+
+                foreach (XmlNode xn in eGPIList)
+                {
+
+                    string name;
+                    int? id;
+
+                    if (xn["ID"].InnerText.Length == 0)
+                    {
+                        Logfile.Write("CONFIG :: ERROR :: Found empty EGPI <ID> tag! Discarding");
+                        continue;
+                    }
+                    else
+                    {
+                        id = Convert.ToInt32(xn["ID"].InnerText);
+                    }
+
+
+                    if (xn["NAME"].InnerText.Length != 0)
+                    {
+                        name = xn["NAME"].InnerText;
+                    }
+                    else
+                    {
+                        name = "N/A";
+                    }
+
+
+                    //Create EGPI Objects and store them in the EGPI object list in Core. If there is an error or blank ID number, dont call the constructor. 
+
+
+                    if (id != null )
+                    {
+                        EGPIs.TryAdd(name, new EGPI((int)id, name));
+                    }
+                    
+                }
+
+
+            }
+            else
+            {
+                Logfile.Write("CONFIG :: WARN :: Found no EGPI tags under <EmberGPIs> ..");
+            }
+
+
+        }
         private static string CleanUpAudioDeviceName(string devName) 
         {
             ///Cleans up the device name coming from the OS. The device name gets trunkated, and needs therefore a cleanup in order to get a match with
