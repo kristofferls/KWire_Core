@@ -288,7 +288,7 @@ namespace KWire_Core
                                 LogicOutputs.GetOrAdd(stateParameter.Description, logicOut);
 
                                 //Check if changed EGPIO is one listed as a logic of interest in List EGPI in Core: 
-                                UpdateEGPIList(stateParameter.Description, logicOut.IsActive);
+                                UpdateEGPIList(ev);
                             }
                         }
                     }
@@ -296,30 +296,33 @@ namespace KWire_Core
             }
         }
 
-        private void UpdateEGPIList(string Description, bool state) 
+        private void UpdateEGPIList(GpioChangedEvent ev) 
         {
             if (Core.EGPIs != null) 
             {
                 //try get the ID
-                var _egpi = new EGPI();
+                EGPI _egpi;
                 
                 
-                bool idexists = Core.EGPIs.TryGetValue(Description, out _egpi);
+                bool idexists = Core.EGPIs.TryGetValue(ev.Identifier, out _egpi);
 
 
                 if (idexists && _egpi.Id != null)  
                 {
-                    _logger.LogInformation("Got a match in Core.EGPIs dicitonary : " + Description + " == " + _egpi.Name);
-                    _logger.LogInformation("State was: " + _egpi.State.ToString() + " New state is: " + state.ToString());
+                    _logger.LogInformation("Got a match in Core.EGPIs dicitonary : " + ev.Identifier + " == " + _egpi.Name);
+                    _logger.LogInformation("State was: " + _egpi.State.ToString() + " New state is: " + ev.LogicState.ToString());
 
-                    Core.EGPIs.AddOrUpdate(Description, new EGPI()
+                    Core.EGPIs.AddOrUpdate(ev.Identifier, new EGPI()
                     {
-                        Name = Description,
+                        Name = ev.Identifier,
                         Id = _egpi.Id,
-                        State = state
+                        State = ev.LogicState
                     }, (key, oldValue) => 
                     { 
-                        oldValue.State = state;
+                        if(oldValue.State != ev.LogicState) 
+                        {
+                            oldValue.State = ev.LogicState;
+                        }
                         return oldValue;
                     });;
                 }
@@ -351,7 +354,7 @@ namespace KWire_Core
                     return oldValue;
                 });;
 
-                UpdateEGPIList(data.Description, (bool)data.Value);
+                UpdateEGPIList(ev);
 
                 _logger.LogInformation($"{data.Description} changed to {(bool)data.Value}");
             }

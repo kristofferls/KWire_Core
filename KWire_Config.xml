@@ -7,6 +7,7 @@
 		<Ember_ProviderName>EGPIO_AUTOCAM</Ember_ProviderName>
 		<AutoCam_IP>127.0.0.1</AutoCam_IP>
 		<AutoCam_Port>5500</AutoCam_Port>
+		<AutoCam_LevelTreshold>30</AutoCam_LevelTreshold>
 		<AutoCam_BroadcastInterval>30</AutoCam_BroadcastInterval>
 		<Service_Monitor_Enabled>false</Service_Monitor_Enabled>
 		<AUDIOSERVICE_NAME>Windows Search</AUDIOSERVICE_NAME>

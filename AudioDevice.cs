@@ -7,20 +7,31 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using System.ComponentModel;
+using System.Runtime.CompilerServices;
+using Windows.Security.EnterpriseData;
+using Windows.ApplicationModel.VoiceCommands;
+using System.Reflection.Metadata.Ecma335;
 
 namespace KWire
 {
-    public class Device
+    public interface LevelDetector 
+    {
+        public event Action<LevelChangedEvent>? OnLevelChanged;
+    }
+    public class Device : IDisposable, LevelDetector
     {
         // AUDIODEVICE CLASS 
         private int id;
         private string source;
         private string deviceName;
         private int channels;
-        private float level;
+        private int level;
+        private float leveldB;
+        private WaveInEvent waveIn; 
         //private readonly ILogger<Device> _logger;
 
-        //
+        public event Action<LevelChangedEvent> OnLevelChanged;
 
         // Constructor enables monitoring of input level by default. 
         public Device(int id, string sourceName, string devName, int channels)
@@ -59,20 +70,26 @@ namespace KWire
             set { channels = value; }
         }
 
-        public float Level 
+        public int Level 
         {
-        
             get { return level; }
             private set { level = value; }
         }
-        
+
+        public float LeveldB 
+        {
+            get { return leveldB; }
+            private set { leveldB = value; }
+        }
+
+       
 
 
         public void MonitorLevel()  
         
         {
            //create a new recording session object
-           var waveIn = new WaveInEvent();
+           waveIn = new WaveInEvent();
 
            //set the recording session device ID
            waveIn.DeviceNumber = id;
@@ -81,7 +98,6 @@ namespace KWire
 
             //TODO: this fails when Windows denies access to the microphone due to security settings. Therefore: it needs to check it has permission somehow.. 
 
-           
         }
 
         private void OnDataAvailable(object sender, WaveInEventArgs args) //Converts audio level to FloatingPoint 
@@ -101,16 +117,36 @@ namespace KWire
                 if (sample32 > max) max = sample32;
                 //Console.WriteLine(max);
 
-                level = max; 
+                level = (int)Math.Floor(max) * 255; // Recalculate level to AutoCam 8-bit integer level.  
+                leveldB = max;    // Keep level in dBFS for future use, for debugging in Webconsole. 
+                
+                if (level > Config.AutoCamLevelTreshold) 
+                {
+                    var lv = LevelChangedEvent.Create(level);
+                    OnLevelChanged?.Invoke(lv);
+                }
+
             }
+        
         }
 
+        public void Dispose()
+        {
+            waveIn.StopRecording();
+            waveIn.Dispose();
 
-
-
-
+            Logfile.Write("AudioDevice :: Stopped monitoring of : " + this.DeviceName + " AutoCam-source: " + this.Source);
+        }
     }
 
-
-
 }
+
+    public class LevelChangedEvent
+    {
+        public int Level { get; set; }
+
+        public static LevelChangedEvent Create(int level) 
+        {
+            return new LevelChangedEvent { Level = level };
+        }
+    }

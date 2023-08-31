@@ -15,6 +15,7 @@ namespace KWire
         public static int Ember_Port = 0;
         public static IPAddress AutoCam_IP = null;
         public static int AutoCam_Port = 0;
+        public static int AutoCamLevelTreshold { get; set; }
         //public static int[] DeviceIDs; // depr. 
         public static bool Debug = false;
         //public static string[,] EGPIs;
@@ -28,6 +29,7 @@ namespace KWire
         public static bool EmberEnabled = false;
         public static bool Dante = false;
         public static bool DHD = false;
+         
         
         static Config() 
         {
@@ -71,6 +73,7 @@ namespace KWire
                             XmlNode ember_Port = settingsNode.SelectSingleNode("Ember_Port");
                             XmlNode autoCam_IP = settingsNode.SelectSingleNode("AutoCam_IP");
                             XmlNode autoCam_Port = settingsNode.SelectSingleNode("AutoCam_Port");
+                            XmlNode autoCam_Level = settingsNode.SelectSingleNode("AutoCam_LevelTreshold");
 
                             XmlNode providerName = settingsNode.SelectSingleNode("Ember_ProviderName");
                             //XmlNode vpbSericeName = settingsNode.SelectSingleNode("SoundcardService_Name");
@@ -141,6 +144,17 @@ namespace KWire
                                 AutoCam_IP = Dns.GetHostAddresses(autoCam_IP.InnerXml)[0];
                                 AutoCam_Port = Convert.ToInt32(autoCam_Port.InnerXml);
                             }
+
+                            if(autoCam_Level.InnerXml.Any()) 
+                            {                              
+                                AutoCamLevelTreshold = Convert.ToInt32(autoCam_Level.InnerXml);
+                            }
+                            else
+                            {
+                                AutoCamLevelTreshold= 30; //default
+                            }
+
+                            Logfile.Write("CONFIGFILE :: INFO :: AutoCam Level Treshold set to: " + AutoCamLevelTreshold.ToString());
 
                             if (EmberEnabled == true) 
                             {

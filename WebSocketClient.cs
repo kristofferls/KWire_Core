@@ -8,7 +8,7 @@ using System.Threading;
 
 namespace KWire
 {
-    public class WebSocketClient
+    public class WebSocketClient :IDisposable
     {
         //TODO: Make robust!! 
 
@@ -17,16 +17,8 @@ namespace KWire
         IPEndPoint endPoint;
         Socket socket;
         int _messageCounter;
-
-
-            /*
-        public WebSocketClient(string ip, int port) 
-        {
-            this._ip = Dns.GetHostAddresses(ip)[0];
-            this._port = port; 
-        }
-        
-        */
+        private CancellationToken cancellationToken;
+        public bool Connected { get; private set; } 
 
         public void Disconnect()
         {
@@ -34,6 +26,8 @@ namespace KWire
             {
                 socket.Close();
                 socket.Dispose();
+                Connected = false;
+                cancellationToken = new CancellationToken();
             }     
                         
         }
@@ -47,19 +41,7 @@ namespace KWire
             try 
             {
                 socket = new Socket(AddressFamily.InterNetwork, SocketType.Dgram, ProtocolType.Udp);
-                
-                //Server must say hello or something for this to work. Disabled for the time beeing. 
-                
-                /*
-                if (PollConnection() == false) 
-                {
-                    Logfile.Write("WebSocketClient :: NOT CONNECTED! - new attempt in 5 seconds.");
-                    Thread.Sleep(5000);
-                    Disconnect();
-                    Connect(_ip, _port); //Will result in an endless loop unless connected. 
-                }
-                
-                */
+                if (socket.Connected) { Connected = true; }else { Connected = false;}
             }
             catch (Exception error) 
             {
@@ -85,6 +67,7 @@ namespace KWire
                     if(socket != null && endPoint != null) 
                     {
                         socket.SendTo(data, endPoint);
+                        
                     }
                     
                 }
@@ -112,13 +95,14 @@ namespace KWire
             //System.Console.WriteLine("Sent: " + data);
         }
 
-        public void SendJSON(string message) 
+        public async Task SendJSON(string message) 
         {
-            if(socket != null && endPoint != null) 
+            if(socket != null && endPoint != null && socket.Connected) 
             {
                 byte[] buffer = Encoding.ASCII.GetBytes(message);
 
-                socket.SendTo(buffer, endPoint);
+                //socket.SendTo(buffer, endPoint);
+                await socket.SendToAsync(buffer, SocketFlags.None, endPoint);
             } 
                       
         
@@ -144,5 +128,9 @@ namespace KWire
             return false;    
         }
 
+        public void Dispose()
+        {
+            socket.Dispose();
+        }
     }
 }

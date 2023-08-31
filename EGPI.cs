@@ -15,6 +15,8 @@ namespace KWire
 
     public class EGPI : INotifyPropertyChanged
     {
+        public event PropertyChangedEventHandler PropertyChanged;
+
         private bool _state;
         public string Type { get; set; }
         public int? Id { get; set; }
@@ -28,18 +30,16 @@ namespace KWire
 
             set
             {
-               
                 if (_state != value)
                 {
                     _state = value;
-                    OnPropertyChanged();
+                    OnStateChanged();
                 }
-                
             }
 
         }
 
-
+        /*
         public EGPI(string name)
         {
             Type = "GPO"; //Hardcoded, to make AutoCam parsing easier. 
@@ -47,7 +47,7 @@ namespace KWire
             Id = GetID();
             State = false;
         }
-
+        */
         public EGPI(int id, string name) 
         {
             Type = "GPO";  
@@ -73,13 +73,7 @@ namespace KWire
         {
             Logfile.Write("EGPI :: " + Name + " ID:" +  Id.ToString() + " created");
         }
-
-        /// <summary>
-        /// Gets triggered if any EGPIs state changes
-        /// </summary>
-
-        public event PropertyChangedEventHandler PropertyChanged;
-
+        /*
         private int GetID() 
         {
             if (Core.EGPIs != null) 
@@ -99,16 +93,15 @@ namespace KWire
                 return 0; 
             }
         }
-        protected virtual void OnPropertyChanged([CallerMemberName] string propertyName = null) 
+        */
+        protected virtual void OnStateChanged([CallerMemberName] string propertyName = null) 
         {
             PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
 
             Logfile.Write("EGPI :: " + this.Name + " state change to " + State.ToString());
         }
-           
-
 
     }
 
-   
+
 }
