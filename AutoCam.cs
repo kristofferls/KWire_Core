@@ -23,6 +23,7 @@ namespace KWire_Core
             _logger = logger;
             IPAddress = IP;
             broadcastInterval = BroadcastInterval;
+            port = Port;
             autoCamServer = new WebSocketClient();
 
             _logger.LogInformation("Connecting to AutoCam on IP " + IP.ToString() + " Port: " + port);

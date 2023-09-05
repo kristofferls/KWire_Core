@@ -73,27 +73,7 @@ namespace KWire
         {
             Logfile.Write("EGPI :: " + Name + " ID:" +  Id.ToString() + " created");
         }
-        /*
-        private int GetID() 
-        {
-            if (Core.EGPIs != null) 
-            {
-                if (Core.EGPIs.Count == 0) 
-                {
-                    return 1;
-                }
-                else
-                {
-                    int newID = Core.EGPIs.Count + 1;
-                    return newID;
-                }
-            } 
-            else 
-            { 
-                return 0; 
-            }
-        }
-        */
+
         protected virtual void OnStateChanged([CallerMemberName] string propertyName = null) 
         {
             PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));

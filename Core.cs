@@ -24,7 +24,7 @@ namespace KWire
     {
         public static ILogger<EmberConsumerService> emberLogger;
         public static ILogger<AutoCam> autoCamLogger; 
-
+        public static ILogger<Kwire_Service> kwireLogger;
 
         static void Main(string[] args)
         {
@@ -39,6 +39,7 @@ namespace KWire
 
             emberLogger = loggerFactory.CreateLogger<EmberConsumerService>();
             autoCamLogger = loggerFactory.CreateLogger<AutoCam>();
+            kwireLogger = loggerFactory.CreateLogger<Kwire_Service>();
 
 
             // TOPSHELF SERVICE
@@ -56,7 +57,7 @@ namespace KWire
                     {
                         x.Service<Kwire_Service>(s => {
 
-                            s.ConstructUsing(kwireService => new Kwire_Service());
+                            s.ConstructUsing(kwireService => new Kwire_Service(kwireLogger));
                             s.WhenStarted(kwireService => kwireService.Start());
                             s.WhenStopped(kwireService => kwireService.Stop());
 

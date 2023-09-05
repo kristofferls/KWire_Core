@@ -18,6 +18,7 @@ using System.Runtime.CompilerServices;
 using System.Data.Common;
 using System.Data;
 using Windows.Media.Playback;
+using System.Xml.Linq;
 
 namespace KWire_Core
 {
@@ -28,7 +29,7 @@ namespace KWire_Core
         private string _emberProviderIP;
         private int _emberProviderPort;
         private bool _DHD;
-
+        public ConcurrentDictionary<string, EGPI> EGPIWatchlist { get; set;  } = new ConcurrentDictionary<string, EGPI>(); 
 
         private ConcurrentDictionary<string, GpioChangedEvent> LogicOutputs { get; set; } = new ConcurrentDictionary<string, GpioChangedEvent>();
         public List<GpioChangedEvent> LogicOutputsList => LogicOutputs.Values.ToList();
@@ -40,6 +41,12 @@ namespace KWire_Core
             _emberProviderPort = ProviderPort;
             _DHD = Config.DHD;
             logger.LogInformation("EmberConsumer created. IP: " + ProviderIP + " Port: " + ProviderPort);
+        }
+
+        public void ConfigureEGPIWatchlist(string name, int id)
+        {
+            EGPIWatchlist.TryAdd(name, new EGPI((int)id, name));
+            _logger.LogInformation("Configured EGPI: " + name + id.ToString() + ". List contains " + EGPIWatchlist.Count().ToString() + " members");
         }
 
         private void AddLogicOutput(GpioChangedEvent gpioChangedEvent)
@@ -56,7 +63,7 @@ namespace KWire_Core
             if (_DHD)
             {
                 // Initiate DHD Consumer
-                device = new EmberPlusDhdConsumer(_logger);
+                device = new EmberPlusDhdConsumer(_logger, EGPIWatchlist);
                 _logger.LogInformation("DHD mode");
             }
             else
@@ -223,17 +230,18 @@ namespace KWire_Core
         /// Get's the current GPO's outputs state
         /// </summary>
         public ConcurrentDictionary<string, VirtualGeneralPurposeIO> LogicOutputs { get; private set; } = new ConcurrentDictionary<string, VirtualGeneralPurposeIO>();
-
+        private ConcurrentDictionary<string, EGPI> _egpis { get; set; } = new ConcurrentDictionary<string, EGPI>();
         /// <summary>
         /// Get's triggered when any of the virtual EmBER+ GPO's are triggered.
         /// </summary>
         public event Action<GpioChangedEvent>? OnLogicOutputChanged;
 
-        public EmberPlusDhdConsumer(ILogger<EmberConsumerService> logger)
+        public EmberPlusDhdConsumer(ILogger<EmberConsumerService> logger, ConcurrentDictionary<string, EGPI>egpis)
         {
             _logger = logger;
             _ip = Config.Ember_IP;
             _port = Config.Ember_Port;
+            _egpis = egpis;
 
             device = new DeviceConsumerConnection<DHD52Root>(_logger);
             setup(_ip, _port);
@@ -298,21 +306,21 @@ namespace KWire_Core
 
         private void UpdateEGPIList(GpioChangedEvent ev) 
         {
-            if (Core.EGPIs != null) 
+            if (_egpis!= null) 
             {
                 //try get the ID
                 EGPI _egpi;
                 
                 
-                bool idexists = Core.EGPIs.TryGetValue(ev.Identifier, out _egpi);
+                bool idexists = _egpis.TryGetValue(ev.Identifier, out _egpi);
 
 
                 if (idexists && _egpi.Id != null)  
                 {
-                    _logger.LogInformation("Got a match in Core.EGPIs dicitonary : " + ev.Identifier + " == " + _egpi.Name);
+                    _logger.LogInformation("Got a match in EGPIWatchlist : " + ev.Identifier + " == " + _egpi.Name);
                     _logger.LogInformation("State was: " + _egpi.State.ToString() + " New state is: " + ev.LogicState.ToString());
 
-                    Core.EGPIs.AddOrUpdate(ev.Identifier, new EGPI()
+                    _egpis.AddOrUpdate(ev.Identifier, new EGPI()
                     {
                         Name = ev.Identifier,
                         Id = _egpi.Id,

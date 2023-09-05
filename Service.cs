@@ -1,5 +1,6 @@
 ﻿using KWire_Core;
 using Microsoft.Extensions.Logging;
+using Microsoft.Win32;
 using NAudio.Wave;
 using Newtonsoft.Json;
 using System;
@@ -16,7 +17,7 @@ using System.Xml;
 
 namespace KWire
 {
-    public class Kwire_Service
+    public sealed class Kwire_Service
     {
         private readonly System.Timers.Timer _timer;
         private readonly System.Timers.Timer _ServiceCheckTimer;
@@ -25,21 +26,32 @@ namespace KWire
         public List<Device> AudioDevices = new List<Device>();
         public ConcurrentDictionary<string, EGPI> EGPIs { get; set; } = new ConcurrentDictionary<string, EGPI>();
         public string AudioDevicesJSON;
-        public ILogger<EmberConsumerService> emberLogger;
-        public ILogger<AutoCam> autoCamLogger;
         public EmberConsumerService emberConsumer;
         public AutoCam autoCam;
+        private Task updateAutoCam = null;
+        private CancellationTokenSource cancellationTokenSource;
+        private CancellationToken cancellationToken;
+        private ILogger<Kwire_Service> _logger;
 
-        public Kwire_Service()
+
+        public Kwire_Service(ILogger<Kwire_Service>Logger)
 
         {
+            //Mandatory stuff
+            _logger = Logger;
+            cancellationTokenSource = new CancellationTokenSource();
+            cancellationToken = cancellationTokenSource.Token;
+
+
+            Logger.LogInformation("KWire_Service created");
             Configure(); // Call setup-method to initiate program;
 
-            if (AudioDevices.Count != 0 && EGPIs.Count != 0 ) 
+            if (AudioDevices.Count != 0 && emberConsumer!= null && emberConsumer.EGPIWatchlist.Count != 0 ) 
             {
                 _timer = new System.Timers.Timer(Config.AutoCam_Broadcast_Interval) { AutoReset = true }; // Timer used to call the BroadcastToAutocam function. 
                 //_timer.Elapsed += TimerElapsed;
-                _timer.Elapsed += UpdateAutoCam;
+                _timer.Elapsed += delegate { UpdateAutoCam(); };
+
                 Logfile.Write("KWire Service :: AutoCam Broadcast interval in ms is : " + Convert.ToString(Config.AutoCam_Broadcast_Interval));
 
                 
@@ -61,11 +73,29 @@ namespace KWire
                 Environment.Exit(1);
             }
 
-            
-            
-
         }
 
+        private void UpdateAutoCam() 
+        {
+
+            if (autoCam == null)
+            {
+                _logger.LogWarning("KWire Service :: AutoCam not configured!");  
+            }
+
+            else
+            {
+                Task.Run(async () => await autoCam.UpdateAutoCam(SerializeToJSON()));
+            }
+        }
+       
+        
+        /*
+        private LevelChangedEventHandler UpdateAutoCam(object sender, LevelChangedEventArgs e) 
+        {
+            Task.Run( () =>  Console.WriteLine("Updating Autocam!" + sender.ToString() + e.ToString())); 
+        }
+        */
         private async void CheckServiceStatus(object sender, ElapsedEventArgs e)
         {
             throw new NotImplementedException();
@@ -76,10 +106,13 @@ namespace KWire
             if (Config.Debug == false) 
             {
                 Logfile.Write("KWire Service :: Application crashed! To see all memory data, set debug mode on, and restart the application");
+                Logfile.Write(SerializeWhatever(this));
             }
             else
             {
                 Console.WriteLine("Dumping data");
+
+                Logfile.Write(SerializeWhatever(this));
 
                 Console.WriteLine("Configured number of Audio Devices in Configfile class is " + Config.Devices.Count);
                 foreach (var device in Config.Devices) 
@@ -87,16 +120,16 @@ namespace KWire
                     Console.WriteLine(device.FirstOrDefault()?.ToString());
                 }
 
-                Console.WriteLine("Configured number of audio devices in Core class is : " + Core.AudioDevices.Count);
+                Console.WriteLine("Configured number of audio devices in Servoce is : " + AudioDevices.Count);
 
-                foreach(var deviceInCore in Core.AudioDevices) 
+                foreach(var deviceInCore in AudioDevices) 
                 {
                     Console.WriteLine(deviceInCore.ToString());
                 }
 
-                Console.WriteLine("Configured number of Ember GPIOS is " + Core.EGPIs.Count);
+                Console.WriteLine("Configured number of Ember GPIOS is " + emberConsumer.EGPIWatchlist.Count);
 
-                foreach(var egpio in Core.EGPIs) 
+                foreach(var egpio in EGPIs) 
                 {
                     Console.WriteLine("EGPIO Name is: " + egpio.Key);   
                 }
@@ -104,19 +137,13 @@ namespace KWire
             }
         
         }
-               
-        private async void UpdateAutoCam(object sender, ElapsedEventArgs e) 
-        {
-
-        }
-
 
         public void Start()
         {
-            if (AudioDevices.Count != 0 && EGPIs.Count != 0) 
+            if (AudioDevices.Count != 0) 
             {
                 _timer.Start();
-                var levelChanged = Core.AudioDevices.Any(levelChanged => levelChanged.PropertyChanged += Core.autoCam.UpdateAutoCam());
+                
             }
             else 
             {
@@ -132,7 +159,7 @@ namespace KWire
             Logfile.Write(" --------------- SERIVCE STOPPING --------------");
             _timer.Stop();
             
-            foreach (var device in Core.AudioDevices) 
+            foreach (var device in AudioDevices) 
             {
                 device.Dispose();
 
@@ -160,9 +187,9 @@ namespace KWire
             }
             else if (Config.EmberEnabled == true)
             {
-                ConfigureEGPI();
-                emberConsumer = new EmberConsumerService(emberLogger, Config.Ember_IP, Config.Ember_Port);
+                emberConsumer = new EmberConsumerService(Core.emberLogger, Config.Ember_IP, Config.Ember_Port);
                 emberConsumer.ConfigureEmberConsumer(); //make the connection!
+                ConfigureEGPI();
             }
             else
             {
@@ -189,7 +216,7 @@ namespace KWire
 
             if (Config.AutoCam_IP != null || Config.AutoCam_Port != 0)
             {
-                autoCam = new AutoCam(autoCamLogger, Config.AutoCam_IP, Config.AutoCam_Port, Config.AutoCam_Broadcast_Interval);
+                autoCam = new AutoCam(Core.autoCamLogger, Config.AutoCam_IP, Config.AutoCam_Port, Config.AutoCam_Broadcast_Interval);
             }
 
             else
@@ -412,7 +439,9 @@ namespace KWire
 
                     if (id != null)
                     {
-                       EGPIs.TryAdd(name, new EGPI((int)id, name));
+                        //EGPIs.TryAdd(name, new EGPI((int)id, name));
+
+                        emberConsumer.ConfigureEGPIWatchlist(name, (int)id);
                     }
 
                 }
@@ -482,7 +511,7 @@ namespace KWire
         private string SerializeToJSON()
         {
             var audioDevicesJSON = (JsonConvert.SerializeObject(AudioDevices));
-            var eGPIsJSON = JsonConvert.SerializeObject(EGPIs);
+            var eGPIsJSON = JsonConvert.SerializeObject(emberConsumer.EGPIWatchlist);
 
             //Convert JSON-strings to string for modification
 
@@ -502,6 +531,12 @@ namespace KWire
 
             return JSONString;
 
+        }
+
+        private string SerializeWhatever(object obj) 
+        {
+            var seralizedObj = JsonConvert.SerializeObject(obj);
+            return seralizedObj.ToString();
         }
         private void JSONExport()
         {
