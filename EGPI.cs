@@ -2,6 +2,8 @@
 using System.Collections.Specialized;
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
+using System.Net.Http.Headers;
+using Microsoft.Extensions.Logging;
 
 namespace KWire
 {
@@ -17,10 +19,15 @@ namespace KWire
     {
         public event PropertyChangedEventHandler PropertyChanged;
 
-        private bool _state;
+        private ILogger<EGPI> _logger;
+
+        private bool _state { get; set; }
         public string Type { get; set; }
         public int? Id { get; set; }
         public string Name { get; set; }
+
+        public string? URLOn { get; set; }
+        public string? URLOff { get; set; }
         public bool State
         {
             get
@@ -57,6 +64,18 @@ namespace KWire
             HelloWorld();
         }
 
+        public EGPI(int id, string name, string urlON, string urlOFF, ILogger<EGPI> logger) 
+        {
+            ///Create a EGPI Object with URL/API action to be triggered when state changes. 
+            Type = "GPO";
+            Name = name;
+            Id = id;
+            URLOff = urlOFF;
+            URLOn = urlON;
+            _logger = logger;
+        
+        }
+
         public EGPI(int id, string name, bool state)
         {
             Type = "GPO";
@@ -79,6 +98,44 @@ namespace KWire
             PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
 
             Logfile.Write("EGPI :: " + this.Name + " state change to " + State.ToString());
+
+            if (State =  false && URLOff != null) 
+            {
+                Task.Run(async () => { await ProcessURL(URLOff); });
+            }
+
+            if (State = true && URLOn != null)
+            {
+                Task.Run(async () => { await ProcessURL(URLOff); });
+            }
+        }
+
+        private async Task ProcessURL(string url) 
+        {
+            using HttpClient client = new HttpClient();
+            
+            {
+                client.DefaultRequestHeaders.Accept.Clear();
+
+                try
+                {
+                    var response = await client.GetAsync(url);
+                    _logger.LogInformation(this.Name + " Got response: " +  response.StatusCode);
+
+                    if (response.IsSuccessStatusCode) 
+                    {
+                        _logger.LogInformation(this.Name + " Successfully sent HTTP request");
+                    }
+                }
+                catch (Exception e)
+                {
+                    _logger.LogError(e.Message, e);
+                    Logfile.Write("EGPI " + this.Name + " ERROR:: " + e.StackTrace);
+                }
+ 
+            }
+            
+
         }
 
     }

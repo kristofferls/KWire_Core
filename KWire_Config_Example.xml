@@ -45,10 +45,14 @@
 		<EGPI>
 			<ID>1</ID>
 			<NAME>REDLIGHT</NAME>
+			<URL_ON_TRUE></URL_ON_TRUE>
+			<URL_ON_FALSE></URL_ON_FALSE>
 		</EGPI>
 		<EGPI>
 			<ID>2</ID>
 			<NAME>MASTERONOFF</NAME>
+			<URL_ON_TRUE></URL_ON_TRUE>
+			<URL_ON_FALSE></URL_ON_FALSE>
 		</EGPI>
 	</EmberGPIs>
 </KWire>

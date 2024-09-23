@@ -27,6 +27,8 @@
 		<EGPI>
 			<ID>1</ID>
 			<NAME>EGO_RL</NAME>
+			<URL_ON_TRUE>http://160.67.28.151</URL_ON_TRUE>
+			<URL_ON_FALSE>https://nrk.no/</URL_ON_FALSE>
 		</EGPI>
 		<EGPI>
 			<ID>2</ID>

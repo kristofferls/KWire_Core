@@ -14,6 +14,7 @@ using System.Threading.Tasks;
 using System.Timers;
 using System.Windows.Forms;
 using System.Xml;
+using Microsoft.Extensions.Hosting;
 
 namespace KWire
 {
@@ -412,6 +413,8 @@ namespace KWire
 
                     string name;
                     int? id;
+                    string url_on = string.Empty;
+                    string url_off = string.Empty; 
 
                     if (xn["ID"].InnerText.Length == 0)
                     {
@@ -432,6 +435,26 @@ namespace KWire
                     {
                         name = "N/A";
                     }
+                    
+                    // Check if the EGPI node contains a URL_ON_**** reference. If it does, parse it. 
+                    try
+                    {
+                        if (xn["URL_ON_TRUE"] != null)
+                        {
+                            url_on = xn["URL_ON_TRUE"].InnerText;
+                        }
+
+                        else if (xn["URL_ON_FALSE"] != null)
+                        {
+                            url_off = xn["URL_ON_FALSE"].InnerText;
+                        }
+
+                    }
+                    catch (Exception e)
+                    {
+                        _logger.LogInformation("Something went wrong!" + e.Message);
+                    }
+
 
 
                     //Create EGPI Objects and store them in the EGPI object list in Core. If there is an error or blank ID number, dont call the constructor. 
@@ -440,7 +463,10 @@ namespace KWire
                     if (id != null)
                     {
                         //EGPIs.TryAdd(name, new EGPI((int)id, name));
-
+                        if (url_on.Length > 0 || url_off.Length > 0) 
+                        {
+                            emberConsumer.ConfigureEGPIWatchlist(name, (int)id, url_on, url_off);
+                        }
                         emberConsumer.ConfigureEGPIWatchlist(name, (int)id);
                     }
 
@@ -453,6 +479,7 @@ namespace KWire
                 Logfile.Write("CONFIG :: WARN :: Found no EGPI tags under <EmberGPIs> ..");
             }
 
+            
 
         }
         private static string CleanUpAudioDeviceName(string devName)

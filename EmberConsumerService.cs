@@ -45,8 +45,18 @@ namespace KWire_Core
 
         public void ConfigureEGPIWatchlist(string name, int id)
         {
+            ///Configure EGPIWatchlist without external triggers. 
             EGPIWatchlist.TryAdd(name, new EGPI((int)id, name));
             _logger.LogInformation("Configured EGPI: " + name + id.ToString() + ". List contains " + EGPIWatchlist.Count().ToString() + " members");
+        }
+
+        public void ConfigureEGPIWatchlist(string name, int id, string URLOnTrue, string URLOnFalse) 
+        {
+               ///Configure EGPIWatchlist with URL triggers 
+            EGPIWatchlist.TryAdd(name, new EGPI((int)id, name, URLOnTrue, URLOnFalse, Core.egpiLogger)); ;
+            _logger.LogInformation("Configured EGPI with URL triggers: " + name + id.ToString() + ". List contains " + EGPIWatchlist.Count().ToString() + " members");
+            _logger.LogInformation("URL on TRUE: " + URLOnTrue);
+            _logger.LogInformation("URL on FALSE: " + URLOnFalse);
         }
 
         private void AddLogicOutput(GpioChangedEvent gpioChangedEvent)
@@ -320,19 +330,46 @@ namespace KWire_Core
                     _logger.LogInformation("Got a match in EGPIWatchlist : " + ev.Identifier + " == " + _egpi.Name);
                     _logger.LogInformation("State was: " + _egpi.State.ToString() + " New state is: " + ev.LogicState.ToString());
 
-                    _egpis.AddOrUpdate(ev.Identifier, new EGPI()
+                    if (_egpi.URLOn != null || _egpi.URLOff != null)
                     {
-                        Name = ev.Identifier,
-                        Id = _egpi.Id,
-                        State = ev.LogicState
-                    }, (key, oldValue) => 
-                    { 
-                        if(oldValue.State != ev.LogicState) 
+                        _logger.LogInformation("EGPI has an URL-trigger");
+
+                        _egpis.AddOrUpdate(ev.Identifier, new EGPI()
                         {
-                            oldValue.State = ev.LogicState;
-                        }
-                        return oldValue;
-                    });;
+                            Name = ev.Identifier,
+                            Id = _egpi.Id,
+                            State = ev.LogicState,
+                            URLOff = _egpi.URLOff,
+                            URLOn = _egpi.URLOn,
+
+                        }, (key, oldValue) =>
+                        {
+                            if (oldValue.State != ev.LogicState)
+                            {
+                                oldValue.State = ev.LogicState;
+                            }
+                            return oldValue;
+                        });
+                    }
+                    else
+                    {
+                        _egpis.AddOrUpdate(ev.Identifier, new EGPI()
+                        {
+                            Name = ev.Identifier,
+                            Id = _egpi.Id,
+                            State = ev.LogicState,
+
+
+                        }, (key, oldValue) =>
+                        {
+                            if (oldValue.State != ev.LogicState)
+                            {
+                                oldValue.State = ev.LogicState;
+                            }
+                            return oldValue;
+                        }); ;
+                    }
+
                 }
 
             }

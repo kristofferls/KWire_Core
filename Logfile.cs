@@ -11,7 +11,7 @@ namespace KWire
     static class Logfile
     {
         //static int LinesWritten; Deprecated when running as service. 
-
+        
         public static void Init()
         {
             
@@ -42,8 +42,6 @@ namespace KWire
             try
             {
                 File.AppendAllText(logfile, toLog + Environment.NewLine);
-
-                
             }
             catch (Exception error)
             {
@@ -51,8 +49,8 @@ namespace KWire
                 Console.WriteLine(error.Message);
             }
 
-            Console.WriteLine(WriteToLog);
-
+            //Console.WriteLine(WriteToLog);
+            Core.fileLogger.LogInformation(logmessage);
         }
         public static void DeleteOld()
         {
@@ -80,9 +78,9 @@ namespace KWire
             Write("##################################################################################");
             Write("KWire Ember+ AudioLevel to AutoCam .NET CORE v " + version);
             Write("##################################################################################");
-            Write("");
+            
             Write("Please report errors to kristoffer@nrk.no");
-            Write("");
+            ;
         }
     }
 }

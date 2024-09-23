@@ -1,17 +1,5 @@
-﻿using KWire_Core;
-using Microsoft.Extensions.Logging;
-using NAudio.Wave;
-using Newtonsoft.Json;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using System.ComponentModel;
-using System.Runtime.CompilerServices;
-using Windows.Security.EnterpriseData;
-using Windows.ApplicationModel.VoiceCommands;
-using System.Reflection.Metadata.Ecma335;
+﻿using NAudio.Wave;
+
 
 namespace KWire
 {
@@ -55,7 +43,6 @@ namespace KWire
         {
             get { return id; }
             set { id = value;}
-
         }
 
         public string Source 

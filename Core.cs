@@ -1,22 +1,10 @@
-﻿using NAudio.Wave;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.ServiceModel;
-//using System.ServiceModel.Description;
-//using System.ServiceModel.Web;
-using System.Text;
-using System.Threading.Tasks;
-using Newtonsoft.Json;
-using System.Threading;
-using System.Text.RegularExpressions;
-using Topshelf;
+﻿using Topshelf;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Logging.Console;
-using System.Collections.Concurrent;
 using KWire_Core;
-using System.Data;
-using System.Xml;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
+
 
 namespace KWire
 {
@@ -25,9 +13,13 @@ namespace KWire
         public static ILogger<EmberConsumerService> emberLogger;
         public static ILogger<AutoCam> autoCamLogger; 
         public static ILogger<Kwire_Service> kwireLogger;
+        public static ILogger<EGPI> egpiLogger;
+        public static ILogger<Core> fileLogger;
 
         static void Main(string[] args)
         {
+            //configure logging. 
+            
             using var loggerFactory = LoggerFactory.Create(builder =>
             {
                 builder
@@ -40,6 +32,14 @@ namespace KWire
             emberLogger = loggerFactory.CreateLogger<EmberConsumerService>();
             autoCamLogger = loggerFactory.CreateLogger<AutoCam>();
             kwireLogger = loggerFactory.CreateLogger<Kwire_Service>();
+            egpiLogger = loggerFactory.CreateLogger<EGPI>();
+            fileLogger = loggerFactory.CreateLogger<Core>();
+
+          
+            //configure configuration hosting. 
+
+            using IHost host = Microsoft.Extensions.Hosting.Host.CreateApplicationBuilder(args).Build();
+            IConfiguration config = host.Services.GetRequiredService<IConfiguration>();
 
 
             // TOPSHELF SERVICE
