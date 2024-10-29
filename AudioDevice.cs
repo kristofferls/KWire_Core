@@ -1,4 +1,6 @@
-﻿using NAudio.Wave;
+﻿using Lawo.Diagnostics.Tracing;
+using NAudio.Wave;
+using System.Reflection.Metadata.Ecma335;
 
 
 namespace KWire
@@ -81,7 +83,18 @@ namespace KWire
            //set the recording session device ID
            waveIn.DeviceNumber = id;
            waveIn.DataAvailable += OnDataAvailable;
-           waveIn.StartRecording();
+
+            try
+            {
+                waveIn.StartRecording();
+            }
+            catch (Exception e)
+            {
+                Logfile.Write("AudioDevices :: FATAL ERROR: Cannot start monitoring of device " + this.DeviceName + " error message: " +  e.ToString());
+                
+            } 
+            
+            
 
             //TODO: this fails when Windows denies access to the microphone due to security settings. Therefore: it needs to check it has permission somehow.. 
 

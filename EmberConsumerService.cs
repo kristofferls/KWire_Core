@@ -19,17 +19,18 @@ using System.Data.Common;
 using System.Data;
 using Windows.Media.Playback;
 using System.Xml.Linq;
+using static KWire_Console.Models.AppSettings;
 
 namespace KWire_Core
 {
     public class EmberConsumerService
     {
         private readonly ILogger<EmberConsumerService> _logger;
-        private IEmberPlusConsumer? device = null;
+        private IEmberPlusConsumer device = null;
         private string _emberProviderIP;
         private int _emberProviderPort;
         private bool _DHD;
-        public ConcurrentDictionary<string, EGPI> EGPIWatchlist { get; set;  } = new ConcurrentDictionary<string, EGPI>(); 
+        public ConcurrentDictionary<string, KWire.EGPI> EGPIWatchlist { get; set;  } = new ConcurrentDictionary<string, KWire.EGPI>(); 
 
         private ConcurrentDictionary<string, GpioChangedEvent> LogicOutputs { get; set; } = new ConcurrentDictionary<string, GpioChangedEvent>();
         public List<GpioChangedEvent> LogicOutputsList => LogicOutputs.Values.ToList();
@@ -46,14 +47,14 @@ namespace KWire_Core
         public void ConfigureEGPIWatchlist(string name, int id)
         {
             ///Configure EGPIWatchlist without external triggers. 
-            EGPIWatchlist.TryAdd(name, new EGPI((int)id, name));
+            EGPIWatchlist.TryAdd(name, new KWire.EGPI((int)id, name));
             _logger.LogInformation("Configured EGPI: " + name + id.ToString() + ". List contains " + EGPIWatchlist.Count().ToString() + " members");
         }
 
         public void ConfigureEGPIWatchlist(string name, int id, string URLOnTrue, string URLOnFalse) 
         {
                ///Configure EGPIWatchlist with URL triggers 
-            EGPIWatchlist.TryAdd(name, new EGPI((int)id, name, URLOnTrue, URLOnFalse, Core.egpiLogger)); ;
+            EGPIWatchlist.TryAdd(name, new KWire.EGPI((int)id, name, URLOnTrue, URLOnFalse, Core.egpiLogger)); ;
             _logger.LogInformation("Configured EGPI with URL triggers: " + name + id.ToString() + ". List contains " + EGPIWatchlist.Count().ToString() + " members");
             _logger.LogInformation("URL on TRUE: " + URLOnTrue);
             _logger.LogInformation("URL on FALSE: " + URLOnFalse);
@@ -79,7 +80,7 @@ namespace KWire_Core
             else
             {
                 // Initiate Lawo Consumer
-                device = new EmberPlusLawoConsumer(_logger);
+                device = new EmberPlusLawoConsumer(_logger, EGPIWatchlist);
                 _logger.LogInformation("Lawo mode");
             }
 
@@ -100,7 +101,7 @@ namespace KWire_Core
 
     public interface IEmberPlusConsumer
     {
-        public event Action<GpioChangedEvent>? OnLogicOutputChanged;
+        public event Action<GpioChangedEvent> OnLogicOutputChanged;
     }
 
     public class EmberPlusLawoConsumer : IEmberPlusConsumer
@@ -115,16 +116,20 @@ namespace KWire_Core
         /// Get's the current GPO's outputs state
         /// </summary>
         public ConcurrentDictionary<string, VirtualGeneralPurposeIO> LogicOutputs { get; private set; } = new ConcurrentDictionary<string, VirtualGeneralPurposeIO>();
-
+        private ConcurrentDictionary<string, KWire.EGPI> _egpis { get; set; } = new ConcurrentDictionary<string, KWire.EGPI>();
         /// <summary>
         /// Get's triggered when any of the virtual EmBER+ GPO's are triggered.
         /// </summary>
         public event Action<GpioChangedEvent> OnLogicOutputChanged;
 
-        public EmberPlusLawoConsumer(ILogger<EmberConsumerService> logger)
+        public EmberPlusLawoConsumer(ILogger<EmberConsumerService> logger, ConcurrentDictionary<string, KWire.EGPI> egpis)
         {
             _logger = logger;
-            
+
+            _logger = logger;
+            _ip = Config.Ember_IP;
+            _port = Config.Ember_Port;
+            _egpis = egpis;
 
             device = new DeviceConsumerConnection<PowerCoreRubyRoot>(_logger);
             setup(_ip,_port);
@@ -177,6 +182,7 @@ namespace KWire_Core
                                     IsActive = ev.LogicState,
                                 };
                                 LogicOutputs.GetOrAdd(stateParameter.Parent.Identifier, logicOut);
+                                UpdateEGPIList(ev);
                             }
                         }
                     }
@@ -184,7 +190,70 @@ namespace KWire_Core
             }
         }
 
-        private void LogicOutputStateParameter_PropertyChanged(object? sender, PropertyChangedEventArgs e)
+        private void UpdateEGPIList(GpioChangedEvent ev)
+        {
+            if (_egpis != null)
+            {
+                //try get the ID
+                KWire.EGPI _egpi;
+
+
+                bool idexists = _egpis.TryGetValue(ev.Identifier, out _egpi);
+
+
+                if (idexists && _egpi.Id != null)
+                {
+                    _logger.LogWarning("Got a match in EGPIWatchlist : " + ev.Identifier + " == " + _egpi.Name);
+                    _logger.LogWarning("State was: " + _egpi.State.ToString() + " New state is: " + ev.LogicState.ToString());
+
+                    if (_egpi.URLOn != null || _egpi.URLOff != null)
+                    {
+                        _logger.LogWarning("EGPI has an URL-trigger");
+
+                        _egpis.AddOrUpdate(ev.Identifier, new KWire.EGPI()
+                        {
+                            Name = ev.Identifier,
+                            Id = _egpi.Id,
+                            State = ev.LogicState,
+                            URLOff = _egpi.URLOff,
+                            URLOn = _egpi.URLOn,
+
+                        }, (key, oldValue) =>
+                        {
+                            if (oldValue.State != ev.LogicState)
+                            {
+                                oldValue.State = ev.LogicState;
+                            }
+                            return oldValue;
+                        });
+                    }
+                    else
+                    {
+                        _egpis.AddOrUpdate(ev.Identifier, new KWire.EGPI()
+                        {
+                            Name = ev.Identifier,
+                            Id = _egpi.Id,
+                            State = ev.LogicState,
+
+
+                        }, (key, oldValue) =>
+                        {
+                            if (oldValue.State != ev.LogicState)
+                            {
+                                oldValue.State = ev.LogicState;
+                            }
+                            return oldValue;
+                        }); ;
+                    }
+
+                }
+
+            }
+
+
+        }
+
+        private void LogicOutputStateParameter_PropertyChanged(object sender, PropertyChangedEventArgs e)
         {
             if (sender != null)
             {
@@ -206,8 +275,10 @@ namespace KWire_Core
                 });
 
                 _logger.LogInformation($"{data.Parent.Identifier} changed to {(bool)data.Value}");
+                UpdateEGPIList(ev);
             }
         }
+
     }
 
     public class GpioChangedEvent
@@ -240,13 +311,13 @@ namespace KWire_Core
         /// Get's the current GPO's outputs state
         /// </summary>
         public ConcurrentDictionary<string, VirtualGeneralPurposeIO> LogicOutputs { get; private set; } = new ConcurrentDictionary<string, VirtualGeneralPurposeIO>();
-        private ConcurrentDictionary<string, EGPI> _egpis { get; set; } = new ConcurrentDictionary<string, EGPI>();
+        private ConcurrentDictionary<string, KWire.EGPI> _egpis { get; set; } = new ConcurrentDictionary<string, KWire.EGPI>();
         /// <summary>
         /// Get's triggered when any of the virtual EmBER+ GPO's are triggered.
         /// </summary>
-        public event Action<GpioChangedEvent>? OnLogicOutputChanged;
+        public event Action<GpioChangedEvent> OnLogicOutputChanged;
 
-        public EmberPlusDhdConsumer(ILogger<EmberConsumerService> logger, ConcurrentDictionary<string, EGPI>egpis)
+        public EmberPlusDhdConsumer(ILogger<EmberConsumerService> logger, ConcurrentDictionary<string, KWire.EGPI>egpis)
         {
             _logger = logger;
             _ip = Config.Ember_IP;
@@ -319,7 +390,7 @@ namespace KWire_Core
             if (_egpis!= null) 
             {
                 //try get the ID
-                EGPI _egpi;
+                KWire.EGPI _egpi;
                 
                 
                 bool idexists = _egpis.TryGetValue(ev.Identifier, out _egpi);
@@ -334,7 +405,7 @@ namespace KWire_Core
                     {
                         _logger.LogInformation("EGPI has an URL-trigger");
 
-                        _egpis.AddOrUpdate(ev.Identifier, new EGPI()
+                        _egpis.AddOrUpdate(ev.Identifier, new KWire.EGPI()
                         {
                             Name = ev.Identifier,
                             Id = _egpi.Id,
@@ -353,7 +424,7 @@ namespace KWire_Core
                     }
                     else
                     {
-                        _egpis.AddOrUpdate(ev.Identifier, new EGPI()
+                        _egpis.AddOrUpdate(ev.Identifier, new KWire.EGPI()
                         {
                             Name = ev.Identifier,
                             Id = _egpi.Id,
@@ -377,7 +448,7 @@ namespace KWire_Core
         
         }
 
-        private void LogicOutputStateParameter_PropertyChanged(object? sender, PropertyChangedEventArgs e)
+        private void LogicOutputStateParameter_PropertyChanged(object sender, PropertyChangedEventArgs e)
         {
             if (sender != null)
             {

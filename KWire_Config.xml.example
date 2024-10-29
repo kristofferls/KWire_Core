@@ -7,8 +7,8 @@
 		<Ember_ProviderName>EGPIO_AUTOCAM</Ember_ProviderName>
 		<AutoCam_IP>127.0.0.1</AutoCam_IP>
 		<AutoCam_Port>5500</AutoCam_Port>
+		<AutoCam_LevelTreshold>30</AutoCam_LevelTreshold>
 		<AutoCam_BroadcastInterval>30</AutoCam_BroadcastInterval>
-		<AutoCam_LevelTreshold></AutoCam_LevelTreshold>
 		<Service_Monitor_Enabled>false</Service_Monitor_Enabled>
 		<AUDIOSERVICE_NAME>Windows Search</AUDIOSERVICE_NAME>
 		<DHD>false</DHD>
@@ -19,34 +19,32 @@
 		<Device>
 			<DEVICE_ID></DEVICE_ID>
 			<NAME>Microphone</NAME>
-			<SOURCE>MIK1</SOURCE>
-			<ORDER>1</ORDER>
-		</Device>
+			<SOURCE>EGO</SOURCE>
+			<ORDER>0</ORDER>
+		</Device>			
 	</AudioDevices>
 	<EmberGPIs>
 		<EGPI>
 			<ID>1</ID>
-			<NAME>EGPO_REDLIGHT ACAM</NAME>
+			<NAME>EGO_RL</NAME>
+			<URL_ON_TRUE>http://160.67.28.151</URL_ON_TRUE>
+			<URL_ON_FALSE>https://nrk.no/</URL_ON_FALSE>
 		</EGPI>
-			<EGPI>
+		<EGPI>
 			<ID>2</ID>
-			<NAME>EGPO_RL_EGO</NAME>
+			<NAME>GJEST1_RL</NAME>
 		</EGPI>
 		<EGPI>
 			<ID>3</ID>
-			<NAME>EGPO_RL_PGL2</NAME>
+			<NAME>GJEST2_RL</NAME>
 		</EGPI>
 		<EGPI>
 			<ID>4</ID>
-			<NAME>EGPO_RL_Gjest1</NAME>
+			<NAME>MIC3ON</NAME>
 		</EGPI>
 		<EGPI>
 			<ID>5</ID>
-			<NAME>EGPO_RL_Gjest2</NAME>
-		</EGPI>
-		<EGPI>
-			<ID>6</ID>
-			<NAME>EGPO_RL_Gjest3</NAME>
+			<NAME>MIC4ON</NAME>
 		</EGPI>
 	</EmberGPIs>
 </KWire>

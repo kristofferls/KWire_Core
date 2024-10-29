@@ -145,16 +145,18 @@ namespace KWire
                                 AutoCam_Port = Convert.ToInt32(autoCam_Port.InnerXml);
                             }
 
-                            if(autoCam_Level.InnerXml.Any()) 
-                            {                              
-                                AutoCamLevelTreshold = Convert.ToInt32(autoCam_Level.InnerXml);
+                            if(autoCam_Level.InnerXml.Any() == false ) 
+                            {
+                                Logfile.Write("CONFIGFILE :: ERROR :: No valid AutoCam Level found in config! Defaulting to 30");
+                                AutoCamLevelTreshold = 30; //default
                             }
                             else
                             {
-                                AutoCamLevelTreshold= 30; //default
+                                AutoCamLevelTreshold = Convert.ToInt32(autoCam_Level.InnerXml);
+                                Logfile.Write("CONFIGFILE :: INFO :: AutoCam Level Treshold set to: " + AutoCamLevelTreshold.ToString());
                             }
 
-                            Logfile.Write("CONFIGFILE :: INFO :: AutoCam Level Treshold set to: " + AutoCamLevelTreshold.ToString());
+                            
 
                             if (EmberEnabled == true) 
                             {
