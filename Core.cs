@@ -26,7 +26,12 @@ namespace KWire
                     .AddFilter("Microsoft", LogLevel.Warning)
                     .AddFilter("System", LogLevel.Warning)
                     .AddFilter("LoggingConsoleApp.Program", LogLevel.Debug)
-                    .AddConsole();
+                    .AddSimpleConsole(options =>
+                    {
+                        options.IncludeScopes = true;
+                        options.SingleLine = true;
+                        options.TimestampFormat = "HH:mm:ss.ff ";
+                    });
             });
 
             emberLogger = loggerFactory.CreateLogger<EmberConsumerService>();

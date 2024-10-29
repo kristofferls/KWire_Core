@@ -40,6 +40,7 @@ namespace KWire
         {
             //Mandatory stuff
             _logger = Logger;
+          
             cancellationTokenSource = new CancellationTokenSource();
             cancellationToken = cancellationTokenSource.Token;
 
