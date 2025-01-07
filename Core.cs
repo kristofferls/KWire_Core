@@ -30,7 +30,7 @@ namespace KWire
                     {
                         options.IncludeScopes = true;
                         options.SingleLine = true;
-                        options.TimestampFormat = "HH:mm:ss.ff ";
+                        options.TimestampFormat = "HH:mm:ss.ffff :: ";
                     });
             });
 

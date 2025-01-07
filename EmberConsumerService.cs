@@ -168,7 +168,9 @@ namespace KWire_Core
                             if (stateParameter != null)
                             {
                                 // Subscribe to changes
-                                stateParameter.PropertyChanged += LogicOutputStateParameter_PropertyChanged;
+                               
+
+                                stateParameter.PropertyChanged += LogicOutputStateParameter_PropertyChanged; 
 
                                 // Send out current state information to listeners
                                 var ev = GpioChangedEvent.Create(stateParameter.Parent.Identifier, (bool)stateParameter.Value);
@@ -263,19 +265,21 @@ namespace KWire_Core
                 OnLogicOutputChanged?.Invoke(ev);
 
                 // Update post in the list
-                LogicOutputs.AddOrUpdate(data.Parent.Identifier, new VirtualGeneralPurposeIO()
+                LogicOutputs.AddOrUpdate(data.Parent.Description, new VirtualGeneralPurposeIO()
                 {
-                    Name = data.Parent.Identifier,
+                    Name = data.Parent.Description,
                     TreeParameter = data,
                     IsActive = ev.LogicState,
+
                 }, (key, oldValue) =>
                 {
                     oldValue.IsActive = ev.LogicState;
                     return oldValue;
-                });
+                }); ;
 
-                _logger.LogInformation($"{data.Parent.Identifier} changed to {(bool)data.Value}");
                 UpdateEGPIList(ev);
+
+                _logger.LogInformation($"{data.Description} changed to {(bool)data.Value}");
             }
         }
 
