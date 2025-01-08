@@ -55,6 +55,12 @@
   </ItemGroup>
 
 	<ItemGroup>
+		<None Update="KWire_Config.xml">
+		  <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</None>
+		<None Update="KWire_Config.xml.example">
+		  <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</None>
 		<None Update="VersionAutoIncrement.tt">
 			<Generator>TextTemplatingFileGenerator</Generator>
 			<LastGenOutput>VersionAutoIncrement.cs</LastGenOutput>
@@ -77,12 +83,6 @@
   </ItemGroup>
 
   <ItemGroup>
-    <None Update="KWire_Config.xml">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
-    <None Update="KWire_Config_Example.xml">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </None>
     <None Update="VersionAutoIncrement.tt">
       <Generator>TextTemplatingFileGenerator</Generator>
       <LastGenOutput>VersionAutoIncrement.cs</LastGenOutput>

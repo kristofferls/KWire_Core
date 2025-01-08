@@ -265,9 +265,9 @@ namespace KWire_Core
                 OnLogicOutputChanged?.Invoke(ev);
 
                 // Update post in the list
-                LogicOutputs.AddOrUpdate(data.Parent.Description, new VirtualGeneralPurposeIO()
+                LogicOutputs.AddOrUpdate(data.Parent.Identifier, new VirtualGeneralPurposeIO()
                 {
-                    Name = data.Parent.Description,
+                    Name = data.Parent.Identifier,
                     TreeParameter = data,
                     IsActive = ev.LogicState,
 

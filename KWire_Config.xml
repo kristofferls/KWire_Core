@@ -2,8 +2,8 @@
 <KWire>
 	<Settings>
 		<Ember_Enabled>true</Ember_Enabled>
-		<Ember_IP>127.0.0.1</Ember_IP>
-		<Ember_Port>9000</Ember_Port>
+		<Ember_IP>10.182.121.200</Ember_IP>
+		<Ember_Port>9020</Ember_Port>
 		<Ember_ProviderName>EGPIO_AUTOCAM</Ember_ProviderName>
 		<AutoCam_IP>127.0.0.1</AutoCam_IP>
 		<AutoCam_Port>5500</AutoCam_Port>
@@ -13,40 +13,36 @@
 		<AUDIOSERVICE_NAME>Windows Search</AUDIOSERVICE_NAME>
 		<DHD>false</DHD>
 		<Dante>false</Dante>
-		<Debug>true</Debug>
+		<Debug>false</Debug>
 	</Settings>
 	<AudioDevices>
 		<Device>
 			<DEVICE_ID></DEVICE_ID>
-			<NAME>Microphone</NAME>
+			<NAME>WDM Driver 1</NAME>
 			<SOURCE>MIK1</SOURCE>
 			<ORDER>1</ORDER>
 		</Device>
 	</AudioDevices>
 	<EmberGPIs>
-		<EGPI>
-			<ID>1</ID>
-			<NAME>EGPO_REDLIGHT ACAM</NAME>
-		</EGPI>
 			<EGPI>
-			<ID>2</ID>
-			<NAME>EGPO_RL_EGO</NAME>
-		</EGPI>
-		<EGPI>
-			<ID>3</ID>
-			<NAME>EGPO_RL_PGL2</NAME>
-		</EGPI>
-		<EGPI>
-			<ID>4</ID>
-			<NAME>EGPO_RL_Gjest1</NAME>
-		</EGPI>
-		<EGPI>
-			<ID>5</ID>
-			<NAME>EGPO_RL_Gjest2</NAME>
-		</EGPI>
-		<EGPI>
-			<ID>6</ID>
-			<NAME>EGPO_RL_Gjest3</NAME>
-		</EGPI>
+				<ID>1</ID>
+				<NAME>EGPO_REDLIGHT_ACAM</NAME>
+			</EGPI>
+			<EGPI>
+				<ID>2</ID>
+				<NAME>EGPO_inGst1tilRM_Fader</NAME>
+			</EGPI>
+			<EGPI>
+				<ID>3</ID>
+				<NAME>EGPO_inGst1tilRM_PFL</NAME>
+			</EGPI>
+			<EGPI>
+				<ID>4</ID>
+				<NAME>EGPO_inGst2tilRM_Fader</NAME>
+			</EGPI>
+			<EGPI>
+				<ID>5</ID>
+				<NAME>EGPO_inGst2tilRM_PFL</NAME>
+			</EGPI>
 	</EmberGPIs>
 </KWire>

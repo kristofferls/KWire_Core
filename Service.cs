@@ -71,7 +71,7 @@ namespace KWire
             else
             {
                 Logfile.Write("KWire Service :: Configuration errors found. Please fix! Program terminated");
-                DumpRawDataToLog();
+                //DumpRawDataToLog(); //borked. Todo: fix it. 
                 Environment.Exit(1);
             }
 
@@ -503,25 +503,45 @@ namespace KWire
                 Console.WriteLine("CleanUpAudioDeviceName: devName is: " + devName);
             }
 
-            string[] invalidWords = { "Lawo", "High Definition", "High", "Realtek" };
-            devName = devName.ToUpper();
-            string devNameClean = devName;
 
 
-            foreach (string word in invalidWords)
+            string[] invalidWords = { "R3LAY", "Lawo", "High Definition", "High", "Realtek"};
+            char[] invalidChars = new char[] { ' ', '(', ')', '#' }; 
+            string[] substrings = devName.Split(invalidChars, StringSplitOptions.RemoveEmptyEntries); //split substrings and get rid of paranteces etc. 
+            string devNameClean = null;
+
+            foreach (string word in substrings)
             {
+                bool isAllowed = true;
 
-                string pattern = "[()]*" + word.ToUpper() + ".*"; //Will catch (Lawo R3Lay etc. and remove all that is behind it. 
-                devNameClean = Regex.Replace(devNameClean, pattern, string.Empty);
+                foreach (string invalidWord in invalidWords) 
+                {
+                    if (invalidWord.Contains(word))
+                    {
+                        isAllowed = false;
+                        break;
+                    }
+                }
 
+                if (isAllowed) { devNameClean = devNameClean+word; }
+            
             }
+
+
+
+            
 
             if (Config.Debug)
             {
                 Console.WriteLine("CleanUpAudioDeviceName: devNameClean is: " + devNameClean);
             }
+            
+            if (devNameClean == "")
+            {
+                throw new Exception("devName is EMPTY!");
+            }
 
-            return devNameClean;
+            return devNameClean.ToUpper();
 
         }
 

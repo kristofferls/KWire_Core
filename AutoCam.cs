@@ -15,6 +15,8 @@ namespace KWire_Core
         public IPAddress IPAddress { get; set; }
         public int port { get; set; }   
         public int broadcastInterval {get; set;}
+
+        public bool Connected { get; private set; }
         private WebSocketClient autoCamServer { get; set; }
 
         private readonly ILogger<AutoCam> _logger;
@@ -31,10 +33,12 @@ namespace KWire_Core
             if (autoCamServer.Connected) 
             {
                 _logger.LogInformation($"Connected {autoCamServer.Connected}");
+                Connected = true;
             }
             else
             {
                 _logger.LogWarning("AutoCam" + IP.ToString() + " Port: " + port + " Connection failed!!");
+                Connected = false;
             }
 
         }
