@@ -49,7 +49,7 @@ namespace KWire_Core
         {
             ///Configure EGPIWatchlist without external triggers. 
             EGPIWatchlist.TryAdd(name, new KWire.EGPI((int)id, name));
-            _logger.LogInformation("Configured EGPI: " + name + id.ToString() + ". List contains " + EGPIWatchlist.Count().ToString() + " members");
+            _logger.LogInformation("Configured EGPI: " + name + " ID: " + id.ToString() + " . Monitoring " + EGPIWatchlist.Count().ToString() + " EGPIs");
         }
 
         public void ConfigureEGPIWatchlist(string name, int id, string URLOnTrue, string URLOnFalse) 
@@ -160,9 +160,11 @@ namespace KWire_Core
                     INode inputs = await device.Consumer.Root.NavigateToNode<PowerCoreRubyRoot>($"Ruby/GPIOs/{Config.Ember_ProviderName}/Output Signals", device.Consumer);
                     if (inputs != null)
                     {
+                        _logger.LogWarning("TO AVOID POWERCORE MESSING UP THIS PROCESS IS INTENTIONALLY SLOW");
                         var all = await inputs.ChildNodes(device.Consumer);
                         foreach (var nod in all)
                         {
+                            await Task.Delay(500); //Wait for Powercore! 
                             _logger.LogInformation($" - Listen to ${nod.Identifier}");
                             IParameter stateParameter = await nod.GetParameter("State", device.Consumer);
 

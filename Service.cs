@@ -15,6 +15,7 @@ using System.Timers;
 using System.Windows.Forms;
 using System.Xml;
 using Microsoft.Extensions.Hosting;
+using NAudio.MediaFoundation;
 
 namespace KWire
 {
@@ -472,8 +473,6 @@ namespace KWire
                     }
 
                 }
-
-
             }
             else
             {
