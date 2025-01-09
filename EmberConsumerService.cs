@@ -20,6 +20,7 @@ using System.Data;
 using Windows.Media.Playback;
 using System.Xml.Linq;
 using static KWire_Console.Models.AppSettings;
+using System.Diagnostics.Eventing.Reader;
 
 namespace KWire_Core
 {
@@ -205,8 +206,8 @@ namespace KWire_Core
 
                 if (idexists && _egpi.Id != null)
                 {
-                    _logger.LogWarning("Got a match in EGPIWatchlist : " + ev.Identifier + " == " + _egpi.Name);
-                    _logger.LogWarning("State was: " + _egpi.State.ToString() + " New state is: " + ev.LogicState.ToString());
+                    _logger.LogInformation(ev.Identifier + " STATE CHANGED from: " + _egpi.State.ToString() + " to: " + ev.LogicState.ToString());
+
 
                     if (_egpi.URLOn != null || _egpi.URLOff != null)
                     {
@@ -231,21 +232,30 @@ namespace KWire_Core
                     }
                     else
                     {
-                        _egpis.AddOrUpdate(ev.Identifier, new KWire.EGPI()
-                        {
-                            Name = ev.Identifier,
-                            Id = _egpi.Id,
-                            State = ev.LogicState,
+                        //Is there a change to the egpi? 
 
-
-                        }, (key, oldValue) =>
+                        if (_egpi.State != ev.LogicState)
                         {
-                            if (oldValue.State != ev.LogicState)
+                            _egpis.AddOrUpdate(ev.Identifier, new KWire.EGPI()
                             {
-                                oldValue.State = ev.LogicState;
-                            }
-                            return oldValue;
-                        }); ;
+                                Name = ev.Identifier,
+                                Id = _egpi.Id,
+                                State = ev.LogicState,
+
+
+                            }, (key, oldValue) =>
+                            {
+                                if (oldValue.State != ev.LogicState)
+                                {
+                                    Logfile.Write("EmberConsumerService :: State change in: " + _egpi.Name + " .State was: " + oldValue.State.ToString() + " .New state: " + ev.LogicState.ToString());
+                                    oldValue.State = ev.LogicState;
+                                    
+                                }
+                                return oldValue;
+
+                            }); ;
+                        }
+                 
                     }
 
                 }
@@ -279,7 +289,7 @@ namespace KWire_Core
 
                 UpdateEGPIList(ev);
 
-                _logger.LogInformation($"{data.Description} changed to {(bool)data.Value}");
+                //_logger.LogInformation($"{data.Description} changed to {(bool)data.Value}");
             }
         }
 

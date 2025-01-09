@@ -2,8 +2,10 @@
 <KWire>
 	<Settings>
 		<Ember_Enabled>true</Ember_Enabled>
-		<Ember_IP>10.182.121.200</Ember_IP>
-		<Ember_Port>9020</Ember_Port>
+		<Ember_IP>127.0.0.1</Ember_IP>		
+		<Ember_IPx>10.182.121.200</Ember_IPx>
+		<Ember_Port>9000</Ember_Port>
+		<Ember_Portx>9020</Ember_Portx>
 		<Ember_ProviderName>EGPIO_AUTOCAM</Ember_ProviderName>
 		<AutoCam_IP>127.0.0.1</AutoCam_IP>
 		<AutoCam_Port>5500</AutoCam_Port>

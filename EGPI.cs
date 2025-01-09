@@ -25,10 +25,9 @@ namespace KWire
         public string Type { get; set; }
         public int? Id { get; set; }
         public string Name { get; set; }
-
         public string? URLOn { get; set; }
         public string? URLOff { get; set; }
-        public bool State
+        public bool? State
         {
             get
             {
@@ -37,11 +36,18 @@ namespace KWire
 
             set
             {
+                
                 if (_state != value)
                 {
-                    _state = value;
-                    OnStateChanged();
+                    if (value != null)
+                    {
+                        _state = (bool)value;
+                        //Logfile.Write("EGPI :: " + this.Name + " state change to " + State.ToString() + " Changed " + _statechangecounter.ToString());
+                        
+                        //OnStateChanged();
+                    }
                 }
+                
             }
 
         }
@@ -60,7 +66,15 @@ namespace KWire
             Type = "GPO";  
             Name = name;
             Id = id;
-            State = false;
+            State = null;
+            HelloWorld();
+        }
+        public EGPI(int id, string name, bool state)
+        {
+            Type = "GPO";
+            Name = name;
+            Id = id;
+            State = state; 
             HelloWorld();
         }
 
@@ -76,14 +90,6 @@ namespace KWire
         
         }
 
-        public EGPI(int id, string name, bool state)
-        {
-            Type = "GPO";
-            Name = name;
-            Id = id;
-            State = state;
-        }
-
         public EGPI()
         {
         }
@@ -95,16 +101,16 @@ namespace KWire
 
         protected virtual void OnStateChanged([CallerMemberName] string propertyName = null) 
         {
-            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
+            //PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
 
             Logfile.Write("EGPI :: " + this.Name + " state change to " + State.ToString());
 
-            if (State =  false && URLOff != null) 
+            if (State == false && URLOff != null) 
             {
                 Task.Run(async () => { await ProcessURL(URLOff); });
             }
 
-            if (State = true && URLOn != null)
+            if (State == true && URLOn != null)
             {
                 Task.Run(async () => { await ProcessURL(URLOff); });
             }
