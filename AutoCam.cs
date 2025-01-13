@@ -32,7 +32,7 @@ namespace KWire_Core
             autoCamServer.Connect(IPAddress, port);
             if (autoCamServer.Connected) 
             {
-                _logger.LogInformation($"Connected {autoCamServer.Connected}");
+                _logger.LogInformation($"Connected to AutoCam? : {autoCamServer.Connected}");
                 Connected = true;
             }
             else

@@ -24,7 +24,7 @@ using System.Diagnostics.Eventing.Reader;
 
 namespace KWire_Core
 {
-    public class EmberConsumerService
+    public class EmberConsumerService :IDisposable
     {
         private readonly ILogger<EmberConsumerService> _logger;
         private IEmberPlusConsumer device = null;
@@ -97,6 +97,11 @@ namespace KWire_Core
             //_localHubUpdater.LogicOutputList(LogicOutputsList);
         }
 
+        public void Dispose()
+        {
+            throw new NotImplementedException();
+        }
+
     }
 
 
@@ -105,7 +110,7 @@ namespace KWire_Core
         public event Action<GpioChangedEvent> OnLogicOutputChanged;
     }
 
-    public class EmberPlusLawoConsumer : IEmberPlusConsumer
+    public class EmberPlusLawoConsumer : IEmberPlusConsumer, IDisposable
     {
         private readonly ILogger<EmberConsumerService> _logger;
         //private readonly AppSettings.KWire _settings;
@@ -134,6 +139,11 @@ namespace KWire_Core
 
             device = new DeviceConsumerConnection<PowerCoreRubyRoot>(_logger);
             setup(_ip,_port);
+        }
+
+        public void Dispose() 
+        {
+            throw new NotImplementedException();
         }
 
         private void setup(string ip, int port)
