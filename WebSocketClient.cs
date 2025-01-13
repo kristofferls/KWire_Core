@@ -5,6 +5,7 @@ using System.Text;
 using System.Net;
 using System.Net.Sockets;
 using System.Threading;
+using Windows.Security.EnterpriseData;
 
 namespace KWire
 {
@@ -18,8 +19,9 @@ namespace KWire
         Socket socket;
         int _messageCounter;
         private CancellationToken cancellationToken;
-        public bool Connected { get; private set; } 
+        public bool Connected { get; private set; }
 
+        public EventHandler ConnectionLost;
         public void Disconnect()
         {
             if(socket != null) 
@@ -33,6 +35,7 @@ namespace KWire
         }
         public void Connect(IPAddress ip, int port) 
         {
+            
             _ip = ip;
             _port = port;
             _messageCounter = 0;
@@ -41,70 +44,48 @@ namespace KWire
             try 
             {
                 socket = new Socket(AddressFamily.InterNetwork, SocketType.Dgram, ProtocolType.Udp);
+                socket.Connect(_ip, _port);
                 if (socket.Connected) { Connected = true; }else { Connected = false;}
             }
             catch (Exception error) 
             {
                 Console.WriteLine("WebSocketClient :: {0}", error);
             }
-            
-            
-            
-            
 
         }
-        public void Send( byte[] data )
+
+        protected virtual void OnConnectionLost(EventArgs e)
         {
-            //Data-type should not be ASCII but something else ?? Float? Should be sent as an array somehow.. 
-             
-            //byte[] buffer = Encoding.ASCII.GetBytes(data);
-            //byte[] buffer = Encoding.
+            ConnectionLost?.Invoke(this, e);
 
-            if (_messageCounter < 100000) 
-            {
-                try
-                {
-                    if(socket != null && endPoint != null) 
-                    {
-                        socket.SendTo(data, endPoint);
-                        
-                    }
-                    
-                }
-                catch (Exception err)
-                {
-                    Logfile.Write("WebSocketClient ERROR :: " + err);
-                }
-            }
-                        
-            else 
-            {
-                if (PollConnection() == true) 
-                { _messageCounter = 0; }
-                else
-                {
-                    Logfile.Write("WebSocketClient ERROR :: Connection broken - will try to reconnect ");
-                    Disconnect();
-                    Connect(_ip, _port);
-                }
-                
-            } 
-            
-            
-            
-            //System.Console.WriteLine("Sent: " + data);
+            Disconnect();
+            Console.WriteLine("WebSocketClient :: Reconnection");
+            Connect(_ip, _port);
         }
-
         public async Task SendJSON(string message) 
         {
+            
+            
             if(socket != null && endPoint != null && socket.Connected) 
             {
                 byte[] buffer = Encoding.ASCII.GetBytes(message);
 
                 //socket.SendTo(buffer, endPoint);
-                await socket.SendToAsync(buffer, SocketFlags.None, endPoint);
+                try
+                {
+                    await socket.SendToAsync(buffer, SocketFlags.None, endPoint);
+                }
+                catch (Exception e)
+                {
+                    Logfile.Write("WebSocketClient ERROR:: " + e.Message);
+                    Disconnect();
+                    Connect(_ip, _port);
+                    throw;
+                }
+                
+               
             } 
-                      
+        
         
         }
 

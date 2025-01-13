@@ -171,6 +171,7 @@ namespace KWire_Core
                     if (inputs != null)
                     {
                         _logger.LogWarning("TO AVOID POWERCORE MESSING UP THIS PROCESS IS INTENTIONALLY SLOW");
+                        await Task.Delay(2000);
                         var all = await inputs.ChildNodes(device.Consumer);
                         foreach (var nod in all)
                         {
