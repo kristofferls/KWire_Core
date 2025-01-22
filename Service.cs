@@ -2,7 +2,7 @@
 using Microsoft.Extensions.Logging;
 using Microsoft.Win32;
 using NAudio.Wave;
-using Newtonsoft.Json;
+//using Newtonsoft.Json;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
@@ -16,6 +16,7 @@ using System.Windows.Forms;
 using System.Xml;
 using Microsoft.Extensions.Hosting;
 using NAudio.MediaFoundation;
+using System.Text.Json;
 
 namespace KWire
 {
@@ -557,13 +558,35 @@ namespace KWire
         //TODO : Cleanup the Serialize JSON stuff - it is moved to class AutoCam. 
         private string SerializeToJSON()
         {
-            var audioDevicesJSON = (JsonConvert.SerializeObject(AudioDevices));
-            var eGPIsJSON = JsonConvert.SerializeObject(emberConsumer.EGPIWatchlist);
+            var jsonOptions = new JsonSerializerOptions 
+            {
+                IgnoreReadOnlyFields = true,
+                WriteIndented = true,
+            };
+            
+            var audioDevicesJSON = JsonSerializer.Serialize(AudioDevices,jsonOptions);
+           
 
+           //Added 22.1.25: Rewritten to acommodate limitations on AutoCAM. When serializing a Concurrent Dicitionary, the key value is set as object "name" or index.AutoCam expects the JSON to look like an array. 
+            
+            //Convert Concurrent Dicitionary of monitoried EGPIs to a list of EGPI objects, and serialize. 
+            
+            List <EGPI> eGPIs = new List <EGPI>();
+
+            foreach(var _egpi in emberConsumer.EGPIWatchlist) 
+            {
+               var values = emberConsumer.EGPIWatchlist.GetOrAdd(_egpi.Key, _egpi.Value);
+                if (values != null) 
+                {
+                    eGPIs.Add(new EGPI((int)values.Id, values.Name, (bool)values.State));
+                }
+            }
+            
+            List <EGPI> sortedEGPIs = eGPIs.OrderBy(x => x.Id).ToList();
+          
             //Convert JSON-strings to string for modification
-
+            string serializedEGPIS = JsonSerializer.Serialize(sortedEGPIs, jsonOptions);
             string serializedAudioDevices = audioDevicesJSON.ToString();
-            string serializedEGPIS = eGPIsJSON.ToString();
 
             //In order to merge the two strings, some chars added by the Serializer needs to be removed, and others added, so that the two strings can be combined. 
             serializedAudioDevices = serializedAudioDevices.Replace("]", ",");
@@ -573,8 +596,8 @@ namespace KWire
             string JSONString = serializedAudioDevices + serializedEGPIS;
 
             //Clean up
-            JSONString = JSONString += "]";
-            JSONString = JSONString.Replace("}]]", "}]");
+            //JSONString = JSONString += "]";
+            //JSONString = JSONString.Replace("}]]", "}]"); no longer needed. 
 
             return JSONString;
 
@@ -582,7 +605,7 @@ namespace KWire
 
         private string SerializeWhatever(object obj) 
         {
-            var seralizedObj = JsonConvert.SerializeObject(obj);
+            var seralizedObj = JsonSerializer.Serialize(obj);
             return seralizedObj.ToString();
         }
         private void JSONExport()

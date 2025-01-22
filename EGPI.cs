@@ -4,6 +4,8 @@ using System.ComponentModel;
 using System.Runtime.CompilerServices;
 using System.Net.Http.Headers;
 using Microsoft.Extensions.Logging;
+using System.Text.Json;
+using System.Text.Json.Serialization;
 
 namespace KWire
 {
@@ -25,7 +27,9 @@ namespace KWire
         public string Type { get; set; }
         public int? Id { get; set; }
         public string Name { get; set; }
+        [JsonIgnore]
         public string? URLOn { get; set; }
+        [JsonIgnore]
         public string? URLOff { get; set; }
         public bool? State
         {
@@ -75,7 +79,7 @@ namespace KWire
             Name = name;
             Id = id;
             State = state; 
-            HelloWorld();
+            
         }
 
         public EGPI(int id, string name, string urlON, string urlOFF, ILogger<EGPI> logger) 

@@ -212,15 +212,19 @@ namespace KWire_Core
             {
                 //try get the ID
                 KWire.EGPI _egpi;
-
+                KWire.EGPI _egpistate;
 
                 bool idexists = _egpis.TryGetValue(ev.Identifier, out _egpi);
+
+                //bool? stateset = _egpis.TryGetValue(ev.LogicState, out _egpistate);
 
 
                 if (idexists && _egpi.Id != null)
                 {
-                    _logger.LogInformation(ev.Identifier + " STATE CHANGED from: " + _egpi.State.ToString() + " to: " + ev.LogicState.ToString());
-
+                    if(_egpi.State != ev.LogicState)  //avoid confusing logging. When watchlist is created, its created with state null. 
+                    {
+                        _logger.LogInformation(ev.Identifier + " STATE CHANGED from: " + _egpi.State.ToString() + " to: " + ev.LogicState.ToString());
+                    }
 
                     if (_egpi.URLOn != null || _egpi.URLOff != null)
                     {

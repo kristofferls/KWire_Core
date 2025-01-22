@@ -1,6 +1,7 @@
 ﻿using Lawo.Diagnostics.Tracing;
 using NAudio.Wave;
 using System.Reflection.Metadata.Ecma335;
+using System.Text.Json.Serialization;
 
 
 namespace KWire
@@ -53,12 +54,14 @@ namespace KWire
             set { source = value; }
         }
         
+        [JsonIgnore]
         public int Channels 
         {
             get { return channels; }
             set { channels = value; }
         }
 
+        [JsonIgnore]
         public int Level 
         {
             get { return level; }
