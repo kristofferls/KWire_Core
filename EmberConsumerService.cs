@@ -21,6 +21,7 @@ using Windows.Media.Playback;
 using System.Xml.Linq;
 using static KWire_Console.Models.AppSettings;
 using System.Diagnostics.Eventing.Reader;
+using Windows.Media.Protection.PlayReady;
 
 namespace KWire_Core
 {
@@ -201,6 +202,7 @@ namespace KWire_Core
                                 UpdateEGPIList(ev);
                             }
                         }
+                       
                     }
                 });
             }

@@ -227,10 +227,19 @@ namespace KWire
             {
                 Logfile.Write("MAIN :: ERROR :: No valid AutoCam IP or Port found in config! Please check Config.xml");
             }
+            
+            //Create a JSON file that mimics the AutoCam data being sent over websocet. To make debugging AutoCam easier.. 
+            
+            var exportData = Task.Run(async delegate
+            {
+                await Task.Delay(15000); //it takes a while for the EmberConsumer to fire up
+                JSONExport(); 
+            });
 
-            JSONExport(); //Create a JSON file that mimics the AutoCam data being sent over websocet. To make debugging AutoCam easier.. 
+            exportData.Wait();
 
             Logfile.Write("");
+            Logfile.Write("JSONExport status: " + exportData.Status.ToString());
             Logfile.Write("MAIN :: >>>>>>> Startup Complete <<<<<<<<");
         }
 
@@ -555,7 +564,7 @@ namespace KWire
 
         }
 
-        //TODO : Cleanup the Serialize JSON stuff - it is moved to class AutoCam. 
+       
         private string SerializeToJSON()
         {
             var jsonOptions = new JsonSerializerOptions 
@@ -588,16 +597,14 @@ namespace KWire
             string serializedEGPIS = JsonSerializer.Serialize(sortedEGPIs, jsonOptions);
             string serializedAudioDevices = audioDevicesJSON.ToString();
 
-            //In order to merge the two strings, some chars added by the Serializer needs to be removed, and others added, so that the two strings can be combined. 
-            serializedAudioDevices = serializedAudioDevices.Replace("]", ",");
-            serializedEGPIS = serializedEGPIS.Replace("[", "");
+            //In order to merge the two strings, some formatting added by the Serializer needs to be removed, and others added, so that the two strings can be combined. 
 
+            serializedAudioDevices = serializedAudioDevices.Replace("\r\n]", "");
+            serializedAudioDevices = serializedAudioDevices.Replace("}", "},");
+            serializedEGPIS = serializedEGPIS.Replace("[", "");
+            
             //Create a new JSONstring of the two different types. 
             string JSONString = serializedAudioDevices + serializedEGPIS;
-
-            //Clean up
-            //JSONString = JSONString += "]";
-            //JSONString = JSONString.Replace("}]]", "}]"); no longer needed. 
 
             return JSONString;
 
@@ -613,7 +620,7 @@ namespace KWire
 
             string ProgramPath = AppDomain.CurrentDomain.BaseDirectory;
             string jSONfilePath = ProgramPath + "JSON-AutoCam-Structure-example.json";
-            var audioDevices = new { audioDevices = AudioDevices };
+            //var audioDevices = new { audioDevices = AudioDevices };
 
             System.IO.File.WriteAllText(jSONfilePath, SerializeToJSON());
 

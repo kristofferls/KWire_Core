@@ -19,7 +19,8 @@ namespace KWire
         private int channels;
         private int level;
         private float leveldB;
-        private WaveInEvent waveIn; 
+        private WaveInEvent waveIn;
+        private string deviceType;
         //private readonly ILogger<Device> _logger;
 
         public event Action<LevelChangedEvent> OnLevelChanged;
@@ -27,6 +28,7 @@ namespace KWire
         // Constructor enables monitoring of input level by default. 
         public Device(int id, string sourceName, string devName, int channels)
         {
+            this.deviceType = "AUDIO";
             this.DeviceID = id;
             this.Source = sourceName;
             this.DeviceName = devName;
@@ -37,6 +39,11 @@ namespace KWire
             Logfile.Write("AudioDevice :: LevelMonitoring enabled for ID : " + this.DeviceID + " AutoCam-source: " + this.Source);
         }
 
+        public string Type 
+        {
+            get { return deviceType; }
+            set { deviceType = value; }
+        }
         private string DeviceName
         {
             get { return deviceName; }
