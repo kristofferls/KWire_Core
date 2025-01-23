@@ -112,7 +112,7 @@ namespace KWire_Core
     public interface IEmberPlusConsumer
     {
         public event Action<GpioChangedEvent> OnLogicOutputChanged;
-        public void Disconnect(); //Added to aid in graceful disconnection from EmberProvider when shutting down. 
+        public void Disconnect(); //Added to aid in graceful disconnection from EmberProvider when shutting down. Needs to be defined in this interface to be accessible via inheritance. 
     }
 
     public class EmberPlusLawoConsumer : IEmberPlusConsumer
@@ -183,7 +183,7 @@ namespace KWire_Core
                     {
                         _logger.LogWarning("TO AVOID POWERCORE MESSING UP THIS PROCESS IS INTENTIONALLY SLOW");
                         
-                        await Task.Delay(5000);
+                        await Task.Delay(2000);
                         Stopwatch stopwatch = Stopwatch.StartNew();
 
                         var all = await inputs.ChildNodes(device.Consumer); //This process seems to stall if KWire is restarted instantly. Only happens on PowerCore.. 
@@ -193,7 +193,7 @@ namespace KWire_Core
 
                         foreach (var nod in all)
                         {
-                            await Task.Delay(700); //Wait for Powercore! 
+                            await Task.Delay(500); //Wait for Powercore! 
                             _logger.LogInformation($" - Listen to ${nod.Identifier}");
                             IParameter stateParameter = await nod.GetParameter("State", device.Consumer);
 
