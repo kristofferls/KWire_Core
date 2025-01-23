@@ -22,6 +22,9 @@ using System.Xml.Linq;
 using static KWire_Console.Models.AppSettings;
 using System.Diagnostics.Eventing.Reader;
 using Windows.Media.Protection.PlayReady;
+using System.Diagnostics;
+using Windows.Networking.Proximity;
+using NAudio.CoreAudioApi;
 
 namespace KWire_Core
 {
@@ -100,7 +103,7 @@ namespace KWire_Core
 
         public void Dispose()
         {
-            throw new NotImplementedException();
+           device.Disconnect();
         }
 
     }
@@ -109,9 +112,10 @@ namespace KWire_Core
     public interface IEmberPlusConsumer
     {
         public event Action<GpioChangedEvent> OnLogicOutputChanged;
+        public void Disconnect(); //Added to aid in graceful disconnection from EmberProvider when shutting down. 
     }
 
-    public class EmberPlusLawoConsumer : IEmberPlusConsumer, IDisposable
+    public class EmberPlusLawoConsumer : IEmberPlusConsumer
     {
         private readonly ILogger<EmberConsumerService> _logger;
         //private readonly AppSettings.KWire _settings;
@@ -144,7 +148,13 @@ namespace KWire_Core
 
         public void Dispose() 
         {
-            throw new NotImplementedException();
+            device.Disconnect();
+         
+        }
+
+        void IEmberPlusConsumer.Disconnect() 
+        {
+            Dispose();
         }
 
         private void setup(string ip, int port)
@@ -160,7 +170,7 @@ namespace KWire_Core
             if (connected)
             {
                 Task.Run(async () => {
-                    await Task.Delay(2000);
+                    await Task.Delay(3000);
 
                     while (!device.Consumer.Root.IsOnline)
                     {
@@ -172,11 +182,18 @@ namespace KWire_Core
                     if (inputs != null)
                     {
                         _logger.LogWarning("TO AVOID POWERCORE MESSING UP THIS PROCESS IS INTENTIONALLY SLOW");
-                        await Task.Delay(2000);
-                        var all = await inputs.ChildNodes(device.Consumer);
+                        
+                        await Task.Delay(5000);
+                        Stopwatch stopwatch = Stopwatch.StartNew();
+
+                        var all = await inputs.ChildNodes(device.Consumer); //This process seems to stall if KWire is restarted instantly. Only happens on PowerCore.. 
+                        
+                        stopwatch.Stop();
+                        _logger.LogInformation("Got " + all.Count() + " Ember+ nodes from " + _ip + ". Took: " + stopwatch.Elapsed.ToString());
+
                         foreach (var nod in all)
                         {
-                            await Task.Delay(500); //Wait for Powercore! 
+                            await Task.Delay(700); //Wait for Powercore! 
                             _logger.LogInformation($" - Listen to ${nod.Identifier}");
                             IParameter stateParameter = await nod.GetParameter("State", device.Consumer);
 
@@ -214,7 +231,7 @@ namespace KWire_Core
             {
                 //try get the ID
                 KWire.EGPI _egpi;
-                KWire.EGPI _egpistate;
+                
 
                 bool idexists = _egpis.TryGetValue(ev.Identifier, out _egpi);
 
@@ -360,7 +377,15 @@ namespace KWire_Core
             device = new DeviceConsumerConnection<DHD52Root>(_logger);
             setup(_ip, _port);
         }
+        public void Dispose()
+        {
+            device.Disconnect();
+        }
 
+        void IEmberPlusConsumer.Disconnect()
+        {
+            Dispose();
+        }
         private void setup(string ip, int port)
         {
             device.OnConnectionChanged += Consumer_OnConnectionChanged;

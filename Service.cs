@@ -170,6 +170,7 @@ namespace KWire
             }
 
             autoCam.Dispose();
+            emberConsumer.Dispose();
 
             Logfile.Write(" --------------- PROGRAM TERMINATED --------------");
         }
@@ -567,6 +568,7 @@ namespace KWire
        
         private string SerializeToJSON()
         {
+            string jsonExport = null;
             var jsonOptions = new JsonSerializerOptions 
             {
                 IgnoreReadOnlyFields = true,
@@ -574,39 +576,48 @@ namespace KWire
             };
             
             var audioDevicesJSON = JsonSerializer.Serialize(AudioDevices,jsonOptions);
-           
 
-           //Added 22.1.25: Rewritten to acommodate limitations on AutoCAM. When serializing a Concurrent Dicitionary, the key value is set as object "name" or index.AutoCam expects the JSON to look like an array. 
-            
+
+            //Added 22.1.25: Rewritten to acommodate limitations on AutoCAM. When serializing a Concurrent Dicitionary, the key value is set as object "name" or index.AutoCam expects the JSON to look like an array. 
+
             //Convert Concurrent Dicitionary of monitoried EGPIs to a list of EGPI objects, and serialize. 
-            
-            List <EGPI> eGPIs = new List <EGPI>();
 
-            foreach(var _egpi in emberConsumer.EGPIWatchlist) 
+            if (emberConsumer != null && emberConsumer.EGPIWatchlist.Count != 0)
             {
-               var values = emberConsumer.EGPIWatchlist.GetOrAdd(_egpi.Key, _egpi.Value);
-                if (values != null) 
+                List<EGPI> eGPIs = new List<EGPI>();
+
+                foreach (var _egpi in emberConsumer.EGPIWatchlist)
                 {
-                    eGPIs.Add(new EGPI((int)values.Id, values.Name, (bool)values.State));
+                    var values = emberConsumer.EGPIWatchlist.GetOrAdd(_egpi.Key, _egpi.Value);
+                    if (values != null)
+                    {
+                        eGPIs.Add(new EGPI((int)values.Id, values.Name, (bool)values.State));
+                    }
                 }
+
+                List<EGPI> sortedEGPIs = eGPIs.OrderBy(x => x.Id).ToList();
+
+                //Convert JSON-strings to string for modification
+                string serializedEGPIS = JsonSerializer.Serialize(sortedEGPIs, jsonOptions);
+                string serializedAudioDevices = audioDevicesJSON.ToString();
+
+                //In order to merge the two strings, some formatting added by the Serializer needs to be removed, and others added, so that the two strings can be combined. 
+
+                serializedAudioDevices = serializedAudioDevices.Replace("\r\n]", "");
+                serializedAudioDevices = serializedAudioDevices.Replace("}", "},");
+                serializedAudioDevices = serializedAudioDevices.Replace("},,", "},");
+                serializedEGPIS = serializedEGPIS.Replace("[", "");
+
+                //Create a new JSONstring of the two different types. 
+                jsonExport = serializedAudioDevices + serializedEGPIS;
+            } 
+            else 
+            {
+                _logger.LogError("emberConsumer or EGPIWatchlist is NULL");
             }
             
-            List <EGPI> sortedEGPIs = eGPIs.OrderBy(x => x.Id).ToList();
-          
-            //Convert JSON-strings to string for modification
-            string serializedEGPIS = JsonSerializer.Serialize(sortedEGPIs, jsonOptions);
-            string serializedAudioDevices = audioDevicesJSON.ToString();
 
-            //In order to merge the two strings, some formatting added by the Serializer needs to be removed, and others added, so that the two strings can be combined. 
-
-            serializedAudioDevices = serializedAudioDevices.Replace("\r\n]", "");
-            serializedAudioDevices = serializedAudioDevices.Replace("}", "},");
-            serializedEGPIS = serializedEGPIS.Replace("[", "");
-            
-            //Create a new JSONstring of the two different types. 
-            string JSONString = serializedAudioDevices + serializedEGPIS;
-
-            return JSONString;
+            return jsonExport;
 
         }
 
