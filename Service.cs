@@ -72,6 +72,20 @@ namespace KWire
             } 
             else
             {
+                Logfile.Write("List of Audiodevices contains: ");
+                if(AudioDevices.Count == 0) 
+                {
+                    Logfile.Write("...0! Thats probably where you should look!",3);
+                }
+                else 
+                {
+                    foreach (var dev in AudioDevices)
+                    {
+                        Logfile.Write(dev.Source);
+                        Logfile.Write(dev.DeviceID.ToString());
+                    }
+                }
+                Stop();
                 Logfile.Write("KWire Service :: Configuration errors found. Please fix! Program terminated");
                 //DumpRawDataToLog(); //borked. Todo: fix it. 
                 Environment.Exit(1);
@@ -160,22 +174,33 @@ namespace KWire
         public void Stop() 
         {
 
-            Logfile.Write(" --------------- SERIVCE STOPPING --------------");
-            _timer.Stop();
-            
-            foreach (var device in AudioDevices) 
+            Logfile.Write(" --------------- SERVICE STOPPING --------------");
+
+            if (_timer != null) 
             {
-                device.Dispose();
-
+                _timer.Stop();
             }
+            
+            if (AudioDevices != null) 
+            {
+                foreach (var device in AudioDevices) 
+                {
+                    device.Dispose();
+                }            
+            }
+            
 
+            foreach (var dev in AudioDevices) 
+            {
+                dev.Dispose();
+            }
             autoCam.Dispose();
             emberConsumer.Dispose();
 
             Logfile.Write(" --------------- PROGRAM TERMINATED --------------");
         }
 
-        public async void Configure()
+        public void Configure()
         {
 
             Logfile.Init(); //Start the logger service. 
@@ -317,11 +342,10 @@ namespace KWire
 
                 for (int i = 0; i < Config.Devices.Count; i++)
                 {
-                    if (Config.Debug)
-                    {
-                        Console.WriteLine("ConfigureAudioDevices() :: Treating device : " + Config.Devices[i][1]);
-                        Console.WriteLine("ConfiguredAudioDevices() :: AudioDevices array now has " + AudioDevices.Count + " members");
-                    }
+                    
+                    _logger.LogInformation("ConfigureAudioDevices() :: Treating device : " + Config.Devices[i][1]);
+                    _logger.LogInformation("ConfiguredAudioDevices() :: AudioDevices array now has " + AudioDevices.Count + " members");
+                    
 
                     if (Config.Devices[i][3].Length > 0) // IF there is a DeviceID tag set, use that to create the AudioDevice. 
                     {
@@ -337,7 +361,7 @@ namespace KWire
                     else
                     {
 
-                        string devNameFromConfig = Convert.ToString(Config.Devices[i][1]); // the device name from position 1 in array. 
+                        string devNameFromConfig = Convert.ToString(Config.Devices[i][2]); // the device name from position 1 in array. 
                         string sourceName = Config.Devices[i][2];
                         //Clean up the match criteria. 
 
@@ -348,22 +372,21 @@ namespace KWire
 
                             for (int x = 0; x < systemDevices.Count; x++)
                             {
-
-
-                                if (Config.Debug)
-                                {
-                                    Console.WriteLine("Match is " + match);
-                                    Console.WriteLine("systemDevices name is: " + systemDevices[x][1]);
-                                }
-
+                                _logger.LogInformation("Match is " + match);
+                                _logger.LogInformation("systemDevices name is: " + systemDevices[x][1]);
+                                
 
                                 if (Regex.IsMatch(systemDevices[x][1].ToUpper(), @"(^|\s)" + match + @"(\s|$)"))
                                 {
                                     var dev = WaveIn.GetCapabilities(x);
                                     AudioDevices.Add(new Device(x, sourceName, dev.ProductName, dev.Channels));
+                                    break;
                                 }
 
-
+                                if(x >= systemDevices.Count) 
+                                {
+                                    Logfile.Write("MAIN:: Did not find any match for:" + devNameFromConfig + " " + sourceName, 2);
+                                }
                             }
 
                         }

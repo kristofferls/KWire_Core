@@ -52,6 +52,49 @@ namespace KWire
             //Console.WriteLine(WriteToLog);
             Core.fileLogger.LogInformation(logmessage);
         }
+
+        public static void Write(string logmessage, int severity) //Severity: 1= Loginfo 2=Warning 3= Critical
+        {
+            var ProgramStart = DateTime.Now;
+            string Date = ProgramStart.ToString("d");
+            string LogFileName = "KWire_" + Date + ".log";
+            string ProgramPath = AppDomain.CurrentDomain.BaseDirectory;
+            string logfile = ProgramPath + @LogFileName;
+
+            //string cleanedLogmessage = logmessage.Replace("\n", "").Replace("\r", "");
+
+            //write to logfile. 
+            var CurrentTime = DateTime.Now;
+            string Time = CurrentTime.ToString("HH:mm:ss:fff");
+            string WriteToLog = Time + " :: " + logmessage;
+
+            string toLog = WriteToLog.Trim();
+
+            try
+            {
+                File.AppendAllText(logfile, toLog + Environment.NewLine);
+            }
+            catch (Exception error)
+            {
+                Console.WriteLine("Could not write to logfile ATM!");
+                Console.WriteLine(error.Message);
+            }
+
+            //Console.WriteLine(WriteToLog);
+            switch (severity) 
+            {
+                case 1 :
+                    Core.fileLogger.LogInformation(logmessage);
+                    break;
+                case 2:
+                    Core.fileLogger.LogWarning(logmessage);
+                    break;
+                case 3:
+                    Core.fileLogger.LogCritical(logmessage);
+                    break;
+            }
+            
+        }
         public static void DeleteOld()
         {
             string ProgramPath = AppDomain.CurrentDomain.BaseDirectory;

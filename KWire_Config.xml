@@ -20,8 +20,8 @@
 	<AudioDevices>
 		<Device>
 			<DEVICE_ID></DEVICE_ID>
-			<NAME>WDM Driver 1</NAME>
-			<SOURCE>MIK1</SOURCE>
+			<NAME>MIK1</NAME>
+			<SOURCE>ACAM_MIC1</SOURCE>
 			<ORDER>1</ORDER>
 		</Device>
 	</AudioDevices>
