@@ -80,7 +80,6 @@ namespace KWire
                 Console.WriteLine(error.Message);
             }
 
-            //Console.WriteLine(WriteToLog);
             switch (severity) 
             {
                 case 1 :
