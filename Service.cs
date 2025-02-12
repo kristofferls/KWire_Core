@@ -175,7 +175,7 @@ namespace KWire
             Logfile.Write(" --------------- PROGRAM TERMINATED --------------");
         }
 
-        public void Configure()
+        public async void Configure()
         {
 
             Logfile.Init(); //Start the logger service. 
@@ -193,8 +193,29 @@ namespace KWire
             else if (Config.EmberEnabled == true)
             {
                 emberConsumer = new EmberConsumerService(Core.emberLogger, Config.Ember_IP, Config.Ember_Port);
-                emberConsumer.ConfigureEmberConsumer(); //make the connection!
                 ConfigureEGPI();
+                emberConsumer.ConfigureEmberConsumer(); //make the connection
+
+                int counter = 0; 
+                
+                while (!emberConsumer.InitDone())
+                {
+                    if (counter < 5) 
+                    {
+                        Thread.Sleep(5000);
+                        _logger.LogInformation("EmberConsumer not ready...Waiting 5 seconds");
+                        counter++;
+                    }
+                    else
+                    {
+                        _logger.LogCritical("EmberConsumer failed to connect!");
+                        break;
+                    }
+                    
+                }
+                
+                //await ConfigureEmberProvider();
+ 
             }
             else
             {
@@ -231,20 +252,17 @@ namespace KWire
             
             //Create a JSON file that mimics the AutoCam data being sent over websocet. To make debugging AutoCam easier.. 
             
-            var exportData = Task.Run(async delegate
-            {
-                await Task.Delay(15000); //it takes a while for the EmberConsumer to fire up
-                JSONExport(); 
-            });
-
-            exportData.Wait();
-
+            JSONExport();
+            
             Logfile.Write("");
-            Logfile.Write("JSONExport status: " + exportData.Status.ToString());
+
             Logfile.Write("MAIN :: >>>>>>> Startup Complete <<<<<<<<");
         }
 
-
+        private async Task<bool> ConfigureEmberProvider() 
+        {
+            return await Task.Run(() => emberConsumer.ConfigureConsumer());
+        }
         public void ConfigureAudioDevices()
         {
             // Gets info on all available recording devices, and creates an array of AudioDevice-objects. 

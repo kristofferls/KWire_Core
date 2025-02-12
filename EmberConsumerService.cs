@@ -25,6 +25,7 @@ using Windows.Media.Protection.PlayReady;
 using System.Diagnostics;
 using Windows.Networking.Proximity;
 using NAudio.CoreAudioApi;
+using Windows.Devices.WiFiDirect;
 
 namespace KWire_Core
 {
@@ -49,6 +50,8 @@ namespace KWire_Core
             logger.LogInformation("EmberConsumer created. IP: " + ProviderIP + " Port: " + ProviderPort);
         }
 
+        
+
         public void ConfigureEGPIWatchlist(string name, int id)
         {
             ///Configure EGPIWatchlist without external triggers. 
@@ -63,6 +66,11 @@ namespace KWire_Core
             _logger.LogInformation("Configured EGPI with URL triggers: " + name + id.ToString() + ". List contains " + EGPIWatchlist.Count().ToString() + " members");
             _logger.LogInformation("URL on TRUE: " + URLOnTrue);
             _logger.LogInformation("URL on FALSE: " + URLOnFalse);
+        }
+
+        public bool InitDone() 
+        {
+            return device.InitDone();
         }
 
         private void AddLogicOutput(GpioChangedEvent gpioChangedEvent)
@@ -86,11 +94,43 @@ namespace KWire_Core
             {
                 // Initiate Lawo Consumer
                 device = new EmberPlusLawoConsumer(_logger, EGPIWatchlist);
+                
                 _logger.LogInformation("Lawo mode");
             }
 
             // Setup listener to Ember GPOs
             device.OnLogicOutputChanged += DeviceLogicOut_OnParameterChanged;
+        }
+
+        public bool ConfigureConsumer()
+        {
+            if (_DHD)
+            {
+                // Initiate DHD Consumer
+                device = new EmberPlusDhdConsumer(_logger, EGPIWatchlist);
+                _logger.LogInformation("DHD mode");
+            }
+            else
+            {
+                // Initiate Lawo Consumer
+                device = new EmberPlusLawoConsumer(_logger, EGPIWatchlist);
+
+                _logger.LogInformation("Lawo mode");
+            }
+
+            // Setup listener to Ember GPOs
+            device.OnLogicOutputChanged += DeviceLogicOut_OnParameterChanged;
+
+            int counter = 0;
+            
+            while (!device.InitDone() || counter < 10) 
+            {
+                Task.Delay(1000);
+                counter++;
+            }
+
+            return true;
+
         }
 
 
@@ -112,7 +152,8 @@ namespace KWire_Core
     public interface IEmberPlusConsumer
     {
         public event Action<GpioChangedEvent> OnLogicOutputChanged;
-        public void Disconnect(); //Added to aid in graceful disconnection from EmberProvider when shutting down. Needs to be defined in this interface to be accessible via inheritance. 
+        public void Disconnect(); //Added to aid in graceful disconnection from EmberProvider when shutting down. Needs to be defined in this interface to be accessible via inheritance.
+        public bool InitDone();
     }
 
     public class EmberPlusLawoConsumer : IEmberPlusConsumer
@@ -127,6 +168,7 @@ namespace KWire_Core
         /// Get's the current GPO's outputs state
         /// </summary>
         public ConcurrentDictionary<string, VirtualGeneralPurposeIO> LogicOutputs { get; private set; } = new ConcurrentDictionary<string, VirtualGeneralPurposeIO>();
+        public bool _initDone; 
         private ConcurrentDictionary<string, KWire.EGPI> _egpis { get; set; } = new ConcurrentDictionary<string, KWire.EGPI>();
         /// <summary>
         /// Get's triggered when any of the virtual EmBER+ GPO's are triggered.
@@ -136,16 +178,21 @@ namespace KWire_Core
         public EmberPlusLawoConsumer(ILogger<EmberConsumerService> logger, ConcurrentDictionary<string, KWire.EGPI> egpis)
         {
             _logger = logger;
-
+            _initDone = false;
             _logger = logger;
             _ip = Config.Ember_IP;
             _port = Config.Ember_Port;
             _egpis = egpis;
+            
 
             device = new DeviceConsumerConnection<PowerCoreRubyRoot>(_logger);
             setup(_ip,_port);
         }
 
+        public bool InitDone() 
+        {
+            return _initDone; 
+        }
         public void Dispose() 
         {
             device.Disconnect();
@@ -170,7 +217,7 @@ namespace KWire_Core
             if (connected)
             {
                 Task.Run(async () => {
-                    await Task.Delay(3000);
+                    //await Task.Delay(3000);
 
                     while (!device.Consumer.Root.IsOnline)
                     {
@@ -181,19 +228,19 @@ namespace KWire_Core
                     INode inputs = await device.Consumer.Root.NavigateToNode<PowerCoreRubyRoot>($"Ruby/GPIOs/{Config.Ember_ProviderName}/Output Signals", device.Consumer);
                     if (inputs != null)
                     {
-                        _logger.LogWarning("TO AVOID POWERCORE MESSING UP THIS PROCESS IS INTENTIONALLY SLOW");
+                        //_logger.LogWarning("TO AVOID POWERCORE MESSING UP THIS PROCESS IS INTENTIONALLY SLOW");
                         
-                        await Task.Delay(2000);
-                        Stopwatch stopwatch = Stopwatch.StartNew();
+                        //await Task.Delay(500);
+                        //Stopwatch stopwatch = Stopwatch.StartNew();
 
                         var all = await inputs.ChildNodes(device.Consumer); //This process seems to stall if KWire is restarted instantly. Only happens on PowerCore.. 
                         
-                        stopwatch.Stop();
-                        _logger.LogInformation("Got " + all.Count() + " Ember+ nodes from " + _ip + ". Took: " + stopwatch.Elapsed.ToString());
+                        //stopwatch.Stop();
+                        //_logger.LogInformation("Got " + all.Count() + " Ember+ nodes from " + _ip + ". Took: " + stopwatch.Elapsed.ToString());
 
                         foreach (var nod in all)
                         {
-                            await Task.Delay(500); //Wait for Powercore! 
+                            //await Task.Delay(500); //Wait for Powercore! 
                             _logger.LogInformation($" - Listen to ${nod.Identifier}");
                             IParameter stateParameter = await nod.GetParameter("State", device.Consumer);
 
@@ -216,12 +263,14 @@ namespace KWire_Core
                                     IsActive = ev.LogicState,
                                 };
                                 LogicOutputs.GetOrAdd(stateParameter.Parent.Identifier, logicOut);
-                                UpdateEGPIList(ev);
+                                await Task.Delay(100);
+                                //UpdateEGPIList(ev);
                             }
                         }
-                       
+                     _initDone = true;
                     }
                 });
+                
             }
         }
 
@@ -376,6 +425,12 @@ namespace KWire_Core
 
             device = new DeviceConsumerConnection<DHD52Root>(_logger);
             setup(_ip, _port);
+        }
+        
+        
+        public bool InitDone() 
+        {
+            return true; //NOT IMPLEMENTED!!
         }
         public void Dispose()
         {
