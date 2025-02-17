@@ -17,13 +17,14 @@ using System.Xml;
 using Microsoft.Extensions.Hosting;
 using NAudio.MediaFoundation;
 using System.Text.Json;
+using Windows.ApplicationModel.VoiceCommands;
 
 namespace KWire
 {
     public sealed class Kwire_Service
     {
         private readonly System.Timers.Timer _timer;
-        private readonly System.Timers.Timer _ServiceCheckTimer;
+
 
         public int NumberOfAudioDevices = WaveIn.DeviceCount;
         public List<Device> AudioDevices = new List<Device>();
@@ -293,7 +294,7 @@ namespace KWire
             // Gets info on all available recording devices, and creates an array of AudioDevice-objects. 
 
             List<string[]> systemDevices = new List<string[]>(); // temporary storage of all devices. 
-
+            List<SystemAudioDevice> systemAudioDevices = new List<SystemAudioDevice>();
 
             Logfile.Write("MAIN :: There are " + WaveIn.DeviceCount + " recording devices available in this system");
             Logfile.Write("");
@@ -308,6 +309,7 @@ namespace KWire
                 // Clean up device name for easier matching. This is not used visually, only internally. 
 
                 // Check if the device is a LAWO R3Lay device. Due to the way the device name is written, it is easilly confused. 
+                /*
                 if (dev.ProductName.Contains("LAWO") || dev.ProductName.Contains("Lawo") || dev.ProductName.Contains("R3LAY"))
                 {
                     if (Config.Debug == true)
@@ -328,7 +330,8 @@ namespace KWire
                     string[] adev = { Convert.ToString(i), dev.ProductName.TrimEnd(), Convert.ToString(dev.Channels) };
                     systemDevices.Add(adev); // Add complete device to list.
                 }
-
+                */
+                systemAudioDevices.Add(new SystemAudioDevice(dev.ProductName, dev.Channels));
 
             }
 
@@ -339,6 +342,11 @@ namespace KWire
 
             if (Config.Devices.Count != 0)
             {
+                foreach(var dev in Config.Devices) 
+                {
+                    _logger.LogInformation("ConfigureAudioDevices() :: Treating device : ");
+                    _logger.LogInformation("ConfiguredAudioDevices() :: AudioDevices array now has " + AudioDevices.Count + " members");
+                }
 
                 for (int i = 0; i < Config.Devices.Count; i++)
                 {
@@ -677,6 +685,81 @@ namespace KWire
             System.IO.File.WriteAllText(jSONfilePath, SerializeToJSON());
 
             Logfile.Write("MAIN :: JSONExport :: Wrote: " + jSONfilePath);
+        }
+
+    }
+
+    public class SystemAudioDevice 
+    {
+        public string Name { get; set; }
+        public int Channels { get; set; }
+
+        public SystemAudioDevice(string name, int channels)
+        {
+            Name = name;
+            Channels = channels;
+        }
+    }
+    
+    public class RequiredAudioDevice 
+    {
+        public string _name { get; set; }
+        int _order {  get; set; }
+
+        public string _source { get; set; }
+        int? _devID { get; set; }    
+
+        
+        string _matchedSystemDevice { get; set; }
+        int _channels { get; set; }
+
+        public RequiredAudioDevice( string Name) 
+        {
+            _name = Name;
+        }
+
+        public RequiredAudioDevice(string name, int order, string source, int? devID) : this(name)
+        {
+            _order = order;
+            _source = source;
+            _devID = devID;
+        }
+
+        public void MatchDevice(string SystemDeviceName) 
+        {
+            CleanUpSystemDeviceName(SystemDeviceName);
+        }
+
+        private string CleanUpSystemDeviceName(string SystemDeviceName) 
+        {
+            // Make a deviceName compareable with the deviceName given in the xml-configuration. 
+            // The challenge is that devices could have names that do not match - from a computer perspective. 
+
+            string _deviceName = SystemDeviceName;
+
+            string[] invalidWords = { "R3LAY", "Lawo", "High Definition", "High", "Realtek" };
+            char[] invalidChars = new char[] { ' ', '(', ')', '#' };
+            string[] substrings = _deviceName.Split(invalidChars, StringSplitOptions.RemoveEmptyEntries); //split substrings and get rid of paranteces etc. 
+            string devNameClean = null;
+
+            foreach (string word in substrings)
+            {
+                bool isAllowed = true;
+
+                foreach (string invalidWord in invalidWords)
+                {
+                    if (invalidWord.Contains(word))
+                    {
+                        isAllowed = false;
+                        break;
+                    }
+                }
+
+                if (isAllowed) { devNameClean = devNameClean + word; }
+
+            }
+
+            return _deviceName;
         }
 
     }

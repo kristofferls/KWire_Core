@@ -19,7 +19,8 @@ namespace KWire
         //public static int[] DeviceIDs; // depr. 
         public static bool Debug = false;
         //public static string[,] EGPIs;
-        public static List<string[]> Devices; 
+        public static List<string[]> Devices;
+        public static List<RequiredAudioDevice> devices; //Rename!! 
         public static int Sources;
         public static string Ember_ProviderName;
         public static string ConfigFile;
@@ -254,29 +255,35 @@ namespace KWire
 
                         if (devID.Length != 0 || name.Length != 0) // Check if the data is valid. You can either enter a Device_ID OR Device name. If none are set, the XML-entry is discarded.
                         {
-                            string[] devs = { order, name, source, devID };
-                            Devices.Add(devs);
+                            int? _devID = null;
+                            if (devID.Length == 0) 
+                            { 
+                                _devID = Convert.ToInt32(devID);
+                                Logfile.Write("CONFIG :: Added: <" + name + "> with source: " + source + " and order: " + order + " to device list");
+                                Logfile.Write("CONFIG :: " + name + " has a DeviceID " + devID + " set in config. This will override name search");
+                            }
+;                            
+                            devices.Add(new RequiredAudioDevice(name, Convert.ToInt32(order), source, _devID ));
+                            
+                            //Logfile.Write("CONFIG :: Added: <" + name + "> with source: " + source + " and order: " + order + " to device list");
+                            
+                            //string[] devs = { order, name, source, devID };
+                            //Devices.Add(devs);
                         }
                         else if (name.Length == 0 && devID.Length == 0)
                         {
-                            Logfile.Write("CONFIG :: Got an empty <NAME> and <DEVICE_ID> tag - discarded");
+                            Logfile.Write("CONFIG :: Got an empty <NAME> and <DEVICE_ID> tag - discarded",2);
                             continue;
-                        }
-
-                        if (devID.Length != 0) //If there is a Device_ID tag in config, make a note of this. 
-                        {
-                            Logfile.Write("CONFIG :: Added: <" + name + "> with source: " + source + " and order: " + order + " to device list");
-                            Logfile.Write("CONFIG :: " + name + " has a DeviceID " + devID + " set in config. This will override name search");
-                        }
-
-                        else 
-                        {
-                            Logfile.Write("CONFIG :: Added: <" + name + "> with source: " + source + " and order: " + order + " to device list");
                         }
                         
                     }
 
-                    Logfile.Write("CONFIG :: Found " + Convert.ToString(Devices.Count) + " audio inputs in config file.");
+                    Logfile.Write("CONFIG :: Found " + devices.Count.ToString() + " audio inputs in config file.These are: ");
+                    foreach (var d in devices) 
+                    {
+                        Logfile.Write("Name: " + d._name + d._source);
+                    }
+
                 } 
                 else 
                 {
@@ -338,75 +345,5 @@ namespace KWire
             }// END OF XML parsing. 
         }
 
-        /*
-         * Moved to Core - it does not belong in the config file to configure stuff. 
-         * 
-        public static void ConfigureEGPI() 
-        {
-            // Ember-GPIS in config. 
-            
-            XmlDocument xml = new XmlDocument();
-            xml.Load(ConfigFile);
-            string xmlContents = xml.InnerXml;
-            xml.LoadXml(xmlContents);
-
-
-
-            XmlNodeList eGPIList = xml.SelectNodes("/KWire/EmberGPIs/EGPI");
-
-            if (eGPIList.Count != 0)
-            {
-
-
-                EGPIs = new string[eGPIList.Count, 2];
-
-
-                foreach (XmlNode xn in eGPIList)
-                {
-
-                    string name = null;
-                    int? id = null;
-
-                    if (xn["ID"].InnerText.Length == 0)
-                    {
-                        Logfile.Write("CONFIG :: ERROR :: Found empty EGPI <ID> tag! Discarding");
-                        continue;
-                    }
-                    else
-                    {
-                        id = Convert.ToInt32(xn["ID"].InnerText);
-                    }
-
-
-                    if (xn["NAME"].InnerText.Length != 0)
-                    {
-                        name = xn["NAME"].InnerText;
-                    }
-                    else
-                    {
-                        name = "N/A";
-                    }
-
-
-                    //Create EGPI Objects and store them in the EGPI object list in Core. If there is an error or blank ID number, dont call the constructor. 
-
-                    if (id != null)
-                    {
-                        int parsedID = id.Value;
-                        Core.EGPIs.Add(new EGPI(parsedID, name));
-                    }
-                    System.Threading.Thread.Sleep(1000); // Give the PowerCore some time to think before hammering it again... 
-                }
-
-
-            }
-            else
-            {
-                Logfile.Write("CONFIG :: WARN :: Found no EGPI tags under <EmberGPIs> ..");
-            }
-
-            
-        }
-        */
     }
 }
